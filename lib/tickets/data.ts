@@ -3,6 +3,16 @@ import { normalizeTickets } from "@/lib/tickets/normalize";
 import type { Ticket } from "@/types/ticket";
 
 /**
+ * Returns all normalized, deduplicated tickets along with duplicates count.
+ */
+export function getNormalizedTicketsData(now: Date = new Date()): {
+  tickets: Ticket[];
+  duplicatesRemoved: number;
+} {
+  return normalizeTickets(RAW_TICKETS, now);
+}
+
+/**
  * Returns all normalized, deduplicated tickets.
  */
 export function getNormalizedTickets(now: Date = new Date()): Ticket[] {

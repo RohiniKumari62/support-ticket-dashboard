@@ -11,18 +11,43 @@ import { TicketAttachment } from "./TicketAttachment";
 import { TicketAiSection } from "./TicketAiSection";
 import { TicketActions } from "./TicketActions";
 import { TicketDetailsSummary } from "./TicketDetailsSummary";
+import { useAppSelector } from "@/lib/store/hooks";
+import {
+  selectCurrentAgentId,
+  selectFilters,
+  selectTicketById,
+} from "@/lib/store/tickets-selectors";
+import {
+  hasActiveFilters,
+  serializeTicketFilters,
+} from "@/lib/tickets/filters";
 
 export interface TicketDetailProps {
-  ticket: Ticket;
-  currentAgentId: string;
+  ticket?: Ticket;
+  ticketId?: string;
+  currentAgentId?: string;
   api?: TicketsApiClient;
 }
 
 export function TicketDetail({
   ticket: initialTicket,
-  currentAgentId,
+  ticketId: propTicketId,
+  currentAgentId: propCurrentAgentId,
   api,
 }: TicketDetailProps) {
+  const storeAgentId = useAppSelector(selectCurrentAgentId);
+  const currentAgentId = propCurrentAgentId ?? storeAgentId;
+
+  const id = propTicketId ?? initialTicket?.id ?? "";
+  const storeTicket = useAppSelector((state) => selectTicketById(state, id));
+  const effectiveTicket = storeTicket ?? initialTicket;
+
+  const filters = useAppSelector(selectFilters);
+  const backHref =
+    hasActiveFilters(filters)
+      ? `/tickets?${serializeTicketFilters(filters)}`
+      : "/tickets";
+
   const {
     ticket,
     pendingAction,
@@ -31,10 +56,30 @@ export function TicketDetail({
     handleStatusChange,
     handleRetriage,
   } = useTicketActions({
-    initialTicket,
+    initialTicket: effectiveTicket ?? undefined,
+    ticketId: id,
     currentAgentId,
     api,
   });
+
+  if (!ticket || !ticket.id) {
+    return (
+      <div className="rounded-[6px] border border-slate-200 bg-white p-8 text-center space-y-3 max-w-[600px] mx-auto">
+        <h2 className="text-base font-semibold text-slate-900">Ticket not found</h2>
+        <p className="text-sm text-slate-500">
+          The requested ticket does not exist or has been removed.
+        </p>
+        <div>
+          <Link
+            href="/tickets"
+            className="text-sm text-blue-600 hover:underline inline-flex items-center"
+          >
+            ← Back to tickets
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const hasSubject = Boolean(ticket.subject && ticket.subject.trim().length > 0);
 
@@ -43,7 +88,7 @@ export function TicketDetail({
       {/* Top Header */}
       <div className="space-y-3">
         <Link
-          href="/tickets"
+          href={backHref}
           className="inline-flex items-center min-h-[40px] text-sm text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           ← Back to tickets

@@ -1,21 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import type { Category, Priority, Ticket } from "@/types/ticket";
-import { ticketsApiClient, type TicketsApiClient } from "@/lib/api/tickets-client";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import {
+  selectCurrentAgentId,
+  selectReviewQueue,
+} from "@/lib/store/tickets-selectors";
+import { reviewTicketThunk } from "@/lib/store/tickets-thunks";
+import {
+  formatReviewErrorMessage,
+  formatReviewSuccessMessage,
+} from "@/lib/tickets/action-messages";
+import type { TicketsApiClient } from "@/lib/api/tickets-client";
 
 export interface ChangeDraft {
   category: Category | "" | null;
   priority: Priority | "" | null;
   reason: string;
-}
-
-export interface QueueItemState {
-  ticket: Ticket;
-  phase: "idle" | "done";
-  saving: boolean;
-  error: string | null;
-  draft: ChangeDraft | null;
 }
 
 export interface ReviewFeedback {
@@ -24,138 +26,61 @@ export interface ReviewFeedback {
 }
 
 export interface UseReviewQueueProps {
-  initialTickets: Ticket[];
-  currentAgentId: string;
+  initialTickets?: Ticket[];
+  currentAgentId?: string;
   api?: TicketsApiClient;
 }
 
 export function useReviewQueue({
-  initialTickets,
-  currentAgentId,
-  api = ticketsApiClient,
-}: UseReviewQueueProps) {
-  // Preserve stable initial sort order via IDs
-  const [orderedIds] = useState<string[]>(() => initialTickets.map((t) => t.id));
+  currentAgentId: propCurrentAgentId,
+}: UseReviewQueueProps = {}) {
+  const dispatch = useAppDispatch();
+  const storeAgentId = useAppSelector(selectCurrentAgentId);
+  const currentAgentId = propCurrentAgentId ?? storeAgentId;
 
-  // State of each queue item keyed by ticket id
-  const [items, setItems] = useState<Record<string, QueueItemState>>(() => {
-    const map: Record<string, QueueItemState> = {};
-    for (const ticket of initialTickets) {
-      map[ticket.id] = {
-        ticket,
-        phase: "idle",
-        saving: false,
-        error: null,
-        draft: null,
-      };
-    }
-    return map;
-  });
+  const queueTickets = useAppSelector(selectReviewQueue);
 
+  const [drafts, setDrafts] = useState<Record<string, ChangeDraft>>({});
+  const [itemErrors, setItemErrors] = useState<Record<string, string | null>>({});
   const [feedback, setFeedback] = useState<ReviewFeedback | null>(null);
-
-  // Synchronous per-ticket lock Set: prevents duplicate clicks on the same ticket while saving
-  const savingLocksRef = useRef<Set<string>>(new Set());
-
-  // Ref to latest items for avoiding stale closure reads inside async handlers
-  const itemsRef = useRef(items);
-
-  useEffect(() => {
-    itemsRef.current = items;
-  }, [items]);
 
   const accept = useCallback(
     async (ticketId: string) => {
-      if (savingLocksRef.current.has(ticketId)) return;
-      savingLocksRef.current.add(ticketId);
+      const action = await dispatch(
+        reviewTicketThunk({
+          ticketId,
+          decision: { type: "accept" },
+          reviewerId: currentAgentId,
+        })
+      );
 
-      const snapshot = itemsRef.current[ticketId];
-      if (!snapshot || snapshot.phase === "done") {
-        savingLocksRef.current.delete(ticketId);
-        return;
-      }
-
-      // Optimistic removal: phase becomes "done" immediately
-      setItems((prev) => {
-        const item = prev[ticketId];
-        if (!item) return prev;
-        return {
-          ...prev,
-          [ticketId]: { ...item, phase: "done", saving: true, error: null },
-        };
-      });
-
-      try {
-        const res = await api.submitReview(
-          snapshot.ticket,
-          { type: "accept" },
-          currentAgentId
-        );
-
-        if (res.ok) {
-          setItems((prev) => {
-            const item = prev[ticketId];
-            if (!item) return prev;
-            return {
-              ...prev,
-              [ticketId]: { ...item, ticket: res.ticket, saving: false },
-            };
-          });
-          setFeedback({
-            kind: "success",
-            text: `${ticketId} accepted and removed from the queue.`,
-          });
-        } else {
-          if (res.code === "conflict") {
-            // Already handled: stays removed
-            setItems((prev) => {
-              const item = prev[ticketId];
-              if (!item) return prev;
-              return {
-                ...prev,
-                [ticketId]: { ...item, saving: false },
-              };
-            });
-            setFeedback({
-              kind: "error",
-              text: `${ticketId} was already handled in another session.`,
-            });
-          } else {
-            // Restore snapshot in the same position
-            setItems((prev) => ({
-              ...prev,
-              [ticketId]: {
-                ...snapshot,
-                phase: "idle",
-                saving: false,
-                error: res.message,
-              },
-            }));
-            setFeedback({
-              kind: "error",
-              text: `Couldn't save ${ticketId}: ${res.message}. The ticket is back in the queue.`,
-            });
-          }
+      if (reviewTicketThunk.fulfilled.match(action)) {
+        setFeedback({
+          kind: "success",
+          text: formatReviewSuccessMessage(ticketId, "accept"),
+        });
+        setItemErrors((prev) => {
+          const next = { ...prev };
+          delete next[ticketId];
+          return next;
+        });
+      } else if (reviewTicketThunk.rejected.match(action)) {
+        if (action.meta.condition) {
+          return;
         }
-      } catch {
-        setItems((prev) => ({
+        const payload = action.payload;
+        const msg = payload?.message || "Network error. The ticket is back in the queue.";
+        setItemErrors((prev) => ({
           ...prev,
-          [ticketId]: {
-            ...snapshot,
-            phase: "idle",
-            saving: false,
-            error: "Failed to connect. Please try again.",
-          },
+          [ticketId]: payload?.message ?? "Network error",
         }));
         setFeedback({
           kind: "error",
-          text: `Couldn't save ${ticketId}: Network error. The ticket is back in the queue.`,
+          text: formatReviewErrorMessage(ticketId, msg),
         });
-      } finally {
-        savingLocksRef.current.delete(ticketId);
       }
     },
-    [api, currentAgentId]
+    [currentAgentId, dispatch]
   );
 
   const change = useCallback(
@@ -167,120 +92,69 @@ export function useReviewQueue({
         reason: string;
       }
     ) => {
-      if (savingLocksRef.current.has(ticketId)) return;
-      savingLocksRef.current.add(ticketId);
-
-      const snapshot = itemsRef.current[ticketId];
-      if (!snapshot || snapshot.phase === "done") {
-        savingLocksRef.current.delete(ticketId);
-        return;
-      }
-
-      // Optimistic removal: phase becomes "done" immediately
-      setItems((prev) => {
-        const item = prev[ticketId];
-        if (!item) return prev;
-        return {
-          ...prev,
-          [ticketId]: { ...item, phase: "done", saving: true, error: null },
-        };
-      });
-
-      try {
-        const res = await api.submitReview(
-          snapshot.ticket,
-          {
+      const action = await dispatch(
+        reviewTicketThunk({
+          ticketId,
+          decision: {
             type: "change",
             category: input.category,
             priority: input.priority,
             reason: input.reason,
           },
-          currentAgentId
-        );
+          reviewerId: currentAgentId,
+        })
+      );
 
-        if (res.ok) {
-          setItems((prev) => {
-            const item = prev[ticketId];
-            if (!item) return prev;
-            return {
-              ...prev,
-              [ticketId]: { ...item, ticket: res.ticket, saving: false },
-            };
-          });
-          setFeedback({
-            kind: "success",
-            text: `${ticketId} updated and removed from the queue.`,
-          });
-        } else {
-          if (res.code === "conflict") {
-            setItems((prev) => {
-              const item = prev[ticketId];
-              if (!item) return prev;
-              return {
-                ...prev,
-                [ticketId]: { ...item, saving: false },
-              };
-            });
-            setFeedback({
-              kind: "error",
-              text: `${ticketId} was already handled in another session.`,
-            });
-          } else {
-            // Restore snapshot with draft preserved so user reason isn't lost
-            setItems((prev) => ({
-              ...prev,
-              [ticketId]: {
-                ...snapshot,
-                phase: "idle",
-                saving: false,
-                error: res.message,
-                draft: input,
-              },
-            }));
-            setFeedback({
-              kind: "error",
-              text: `Couldn't save ${ticketId}: ${res.message}. The ticket is back in the queue.`,
-            });
-          }
+      if (reviewTicketThunk.fulfilled.match(action)) {
+        setFeedback({
+          kind: "success",
+          text: formatReviewSuccessMessage(ticketId, "change"),
+        });
+        setDrafts((prev) => {
+          const next = { ...prev };
+          delete next[ticketId];
+          return next;
+        });
+        setItemErrors((prev) => {
+          const next = { ...prev };
+          delete next[ticketId];
+          return next;
+        });
+      } else if (reviewTicketThunk.rejected.match(action)) {
+        if (action.meta.condition) {
+          return;
         }
-      } catch {
-        setItems((prev) => ({
+        const payload = action.payload;
+        const msg = payload?.message || "Network error. The ticket is back in the queue.";
+        setDrafts((prev) => ({
           ...prev,
-          [ticketId]: {
-            ...snapshot,
-            phase: "idle",
-            saving: false,
-            error: "Failed to connect. Please try again.",
-            draft: input,
-          },
+          [ticketId]: input,
+        }));
+        setItemErrors((prev) => ({
+          ...prev,
+          [ticketId]: payload?.message ?? "Network error",
         }));
         setFeedback({
           kind: "error",
-          text: `Couldn't save ${ticketId}: Network error. The ticket is back in the queue.`,
+          text: formatReviewErrorMessage(ticketId, msg),
         });
-      } finally {
-        savingLocksRef.current.delete(ticketId);
       }
     },
-    [api, currentAgentId]
+    [currentAgentId, dispatch]
   );
 
   const dismissFeedback = useCallback(() => {
     setFeedback(null);
   }, []);
 
-  // Compute visible items in original sorted order
-  const visibleItems = orderedIds
-    .map((id) => items[id])
-    .filter((item): item is QueueItemState => item !== undefined && item.phase === "idle");
-
   return {
-    items,
-    visibleItems,
-    remainingCount: visibleItems.length,
+    tickets: queueTickets,
+    remainingCount: queueTickets.length,
     accept,
     change,
     feedback,
     dismissFeedback,
+    drafts,
+    itemErrors,
   };
 }

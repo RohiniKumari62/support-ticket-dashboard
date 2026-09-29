@@ -2,15 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const NAV_ITEMS = [
-  { label: "Tickets", href: "/tickets" },
-  // "(–)" is a placeholder; real count arrives in Phase 6 via Redux.
-  { label: "To review (–)", href: "/review" },
-] as const;
+import { useAppSelector } from "@/lib/store/hooks";
+import { selectReviewCount } from "@/lib/store/tickets-selectors";
 
 export function NavLinks() {
   const pathname = usePathname();
+  const reviewCount = useAppSelector(selectReviewCount);
 
   function isActive(href: string): boolean {
     if (href === "/tickets") {
@@ -20,10 +17,15 @@ export function NavLinks() {
     return pathname === href;
   }
 
+  const navItems = [
+    { label: "Tickets", href: "/tickets" },
+    { label: `To review (${reviewCount})`, href: "/review" },
+  ];
+
   return (
     <nav aria-label="Main navigation">
       <ul className="flex items-center gap-1" role="list">
-        {NAV_ITEMS.map(({ label, href }) => {
+        {navItems.map(({ label, href }) => {
           const active = isActive(href);
           return (
             <li key={href}>

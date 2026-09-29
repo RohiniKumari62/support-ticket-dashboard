@@ -23,6 +23,8 @@ export type ApiResult<T> =
       ok: false;
       code: ApiErrorCode;
       message: string;
+      /** Server-authoritative ticket for conflict rollback (e.g. already reviewed) */
+      ticket?: T;
       assignedTo?: string;
       errors?: Record<string, string | undefined>;
     };

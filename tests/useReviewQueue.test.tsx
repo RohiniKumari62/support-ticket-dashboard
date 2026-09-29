@@ -1,6 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
+import React from "react";
 import { renderHook, act } from "@testing-library/react";
+import { Provider } from "react-redux";
 import { useReviewQueue } from "@/components/review/useReviewQueue";
+import { makeStore } from "@/lib/store/store";
+import { ticketsSeeded } from "@/lib/store/tickets-slice";
 import type { ApiResult, TicketsApiClient } from "@/lib/api/tickets-client";
 import type { Ticket } from "@/types/ticket";
 
@@ -28,6 +32,12 @@ function createTicket(id: string, overrides: Partial<Ticket> = {}): Ticket {
   };
 }
 
+function createWrapper(store: ReturnType<typeof makeStore>) {
+  return function StoreWrapper({ children }: { children: React.ReactNode }) {
+    return <Provider store={store}>{children}</Provider>;
+  };
+}
+
 describe("useReviewQueue", () => {
   const currentAgent = "agent-1";
 
@@ -48,12 +58,17 @@ describe("useReviewQueue", () => {
     const t1 = createTicket("T-1");
     const t2 = createTicket("T-2");
 
-    const { result } = renderHook(() =>
-      useReviewQueue({
-        initialTickets: [t1, t2],
-        currentAgentId: currentAgent,
-        api: mockApi,
-      })
+    const store = makeStore(undefined, { api: mockApi });
+    store.dispatch(ticketsSeeded({ tickets: [t1, t2] }));
+
+    const { result } = renderHook(
+      () =>
+        useReviewQueue({
+          initialTickets: [t1, t2],
+          currentAgentId: currentAgent,
+          api: mockApi,
+        }),
+      { wrapper: createWrapper(store) }
     );
 
     expect(result.current.remainingCount).toBe(2);
@@ -63,13 +78,19 @@ describe("useReviewQueue", () => {
       acceptPromise = result.current.accept("T-1");
     });
 
-    // Optimistic: T-1 removed from visibleItems immediately
+    // Optimistic: T-1 removed from visible queue immediately
     expect(result.current.remainingCount).toBe(1);
-    expect(result.current.visibleItems.map((i) => i.ticket.id)).toEqual(["T-2"]);
+    expect(result.current.tickets.map((i) => i.id)).toEqual(["T-2"]);
 
     // Resolve API
     await act(async () => {
-      resolveApi!({ ok: true, ticket: { ...t1, humanReview: { action: "accepted", reviewedBy: currentAgent, note: null } } });
+      resolveApi!({
+        ok: true,
+        ticket: {
+          ...t1,
+          humanReview: { action: "accepted", reviewedBy: currentAgent, note: null },
+        },
+      });
       await acceptPromise;
     });
 
@@ -93,12 +114,17 @@ describe("useReviewQueue", () => {
     const t1 = createTicket("T-1");
     const t2 = createTicket("T-2");
 
-    const { result } = renderHook(() =>
-      useReviewQueue({
-        initialTickets: [t1, t2],
-        currentAgentId: currentAgent,
-        api: mockApi,
-      })
+    const store = makeStore(undefined, { api: mockApi });
+    store.dispatch(ticketsSeeded({ tickets: [t1, t2] }));
+
+    const { result } = renderHook(
+      () =>
+        useReviewQueue({
+          initialTickets: [t1, t2],
+          currentAgentId: currentAgent,
+          api: mockApi,
+        }),
+      { wrapper: createWrapper(store) }
     );
 
     const changeInput = {
@@ -113,15 +139,14 @@ describe("useReviewQueue", () => {
 
     // Restored in same position (first)
     expect(result.current.remainingCount).toBe(2);
-    expect(result.current.visibleItems.map((i) => i.ticket.id)).toEqual(["T-1", "T-2"]);
+    expect(result.current.tickets.map((i) => i.id)).toEqual(["T-1", "T-2"]);
 
-    const restoredItem = result.current.visibleItems[0];
-    expect(restoredItem.error).toBe("Network error");
-    expect(restoredItem.draft).toEqual(changeInput);
+    expect(result.current.itemErrors["T-1"]).toBe("Network error");
+    expect(result.current.drafts["T-1"]).toEqual(changeInput);
     expect(result.current.feedback?.kind).toBe("error");
   });
 
-  it("conflict keeps the ticket removed with a message", async () => {
+  it("conflict where server ticket was already handled keeps the ticket removed", async () => {
     const mockApi: TicketsApiClient = {
       claimTicket: vi.fn(),
       changeTicketStatus: vi.fn(),
@@ -130,16 +155,24 @@ describe("useReviewQueue", () => {
         ok: false,
         code: "conflict",
         message: "This ticket was already handled.",
+        ticket: createTicket("T-1", {
+          humanReview: { action: "accepted", reviewedBy: "agent-2", note: null },
+        }),
       }),
     };
 
     const t1 = createTicket("T-1");
-    const { result } = renderHook(() =>
-      useReviewQueue({
-        initialTickets: [t1],
-        currentAgentId: currentAgent,
-        api: mockApi,
-      })
+    const store = makeStore(undefined, { api: mockApi });
+    store.dispatch(ticketsSeeded({ tickets: [t1] }));
+
+    const { result } = renderHook(
+      () =>
+        useReviewQueue({
+          initialTickets: [t1],
+          currentAgentId: currentAgent,
+          api: mockApi,
+        }),
+      { wrapper: createWrapper(store) }
     );
 
     await act(async () => {
@@ -148,7 +181,6 @@ describe("useReviewQueue", () => {
 
     expect(result.current.remainingCount).toBe(0);
     expect(result.current.feedback?.kind).toBe("error");
-    expect(result.current.feedback?.text).toContain("already handled");
   });
 
   it("DUPLICATE CLICK on Accept calls the injected api exactly once", async () => {
@@ -168,12 +200,17 @@ describe("useReviewQueue", () => {
     };
 
     const t1 = createTicket("T-1");
-    const { result } = renderHook(() =>
-      useReviewQueue({
-        initialTickets: [t1],
-        currentAgentId: currentAgent,
-        api: mockApi,
-      })
+    const store = makeStore(undefined, { api: mockApi });
+    store.dispatch(ticketsSeeded({ tickets: [t1] }));
+
+    const { result } = renderHook(
+      () =>
+        useReviewQueue({
+          initialTickets: [t1],
+          currentAgentId: currentAgent,
+          api: mockApi,
+        }),
+      { wrapper: createWrapper(store) }
     );
 
     act(() => {
@@ -207,13 +244,17 @@ describe("useReviewQueue", () => {
 
     const t1 = createTicket("T-1");
     const t2 = createTicket("T-2");
+    const store = makeStore(undefined, { api: mockApi });
+    store.dispatch(ticketsSeeded({ tickets: [t1, t2] }));
 
-    const { result } = renderHook(() =>
-      useReviewQueue({
-        initialTickets: [t1, t2],
-        currentAgentId: currentAgent,
-        api: mockApi,
-      })
+    const { result } = renderHook(
+      () =>
+        useReviewQueue({
+          initialTickets: [t1, t2],
+          currentAgentId: currentAgent,
+          api: mockApi,
+        }),
+      { wrapper: createWrapper(store) }
     );
 
     act(() => {

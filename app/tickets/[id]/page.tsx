@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTicketById } from "@/lib/tickets/data";
-import { CURRENT_AGENT_ID } from "@/lib/agents/current-agent";
 import { TicketDetail } from "@/components/tickets/detail/TicketDetail";
 
 export const metadata: Metadata = {
@@ -34,7 +33,5 @@ export default async function TicketDetailPage({
     notFound();
   }
 
-  return (
-    <TicketDetail ticket={ticket} currentAgentId={CURRENT_AGENT_ID} />
-  );
+  return <TicketDetail ticketId={decodedId} ticket={ticket} />;
 }

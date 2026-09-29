@@ -1,16 +1,14 @@
 import type { Ticket } from "@/types/ticket";
 import { getAgentName } from "@/data/agents";
 import { formatDataIssues, getCategoryLabel, getPlanLabel } from "@/lib/tickets/labels";
-import { formatDateTime, formatDateTimeFull, getDeadline } from "@/lib/tickets/time";
+import { formatDateTime, formatDateTimeFull } from "@/lib/tickets/time";
+import { DeadlineCell } from "@/components/tickets/DeadlineCell";
 
-interface TicketDetailsSummaryProps {
+export interface TicketDetailsSummaryProps {
   ticket: Ticket;
 }
 
 export function TicketDetailsSummary({ ticket }: TicketDetailsSummaryProps) {
-  // Static deadline calculation. Dynamic countdown and at-risk styling arrive in Phase 7.
-  const deadlineIso = getDeadline(ticket.createdAt, ticket.priority);
-
   return (
     <div className="rounded-[6px] border border-slate-200 bg-white p-4 sm:p-5 space-y-4">
       <h2 className="text-sm font-semibold text-slate-900">Ticket Details</h2>
@@ -61,11 +59,8 @@ export function TicketDetailsSummary({ ticket }: TicketDetailsSummaryProps) {
 
         <div className="flex justify-between items-baseline gap-2">
           <dt className="text-xs text-slate-500 font-medium">Deadline</dt>
-          <dd
-            className="text-slate-900 text-xs tabular-nums"
-            title={formatDateTimeFull(deadlineIso)}
-          >
-            {formatDateTime(deadlineIso)}
+          <dd className="text-slate-900 text-xs text-right">
+            <DeadlineCell ticket={ticket} />
           </dd>
         </div>
       </dl>

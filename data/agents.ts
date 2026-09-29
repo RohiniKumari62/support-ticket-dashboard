@@ -1,5 +1,7 @@
 import type { Agent } from "@/types/ticket";
 
+export const DEFAULT_AGENT_ID = "agent-1";
+
 export const AGENTS: readonly Agent[] = [
   { id: "agent-1", name: "Priya" },
   { id: "agent-2", name: "Rahul" },

@@ -4,17 +4,27 @@ import { TicketTable } from "./TicketTable";
 import { TicketListItem } from "./TicketListItem";
 import { EmptyTickets } from "./EmptyTickets";
 
-interface TicketListProps {
+export interface TicketListProps {
   tickets: Ticket[];
   duplicatesRemoved?: number;
   /** True when at least one filter or search is active (changes the empty state) */
   hasActiveFilters?: boolean;
+  selectedIds?: Set<string>;
+  onToggle?: (id: string) => void;
+  onSelectAll?: () => void;
+  isAllSelected?: boolean;
+  isIndeterminate?: boolean;
 }
 
 export function TicketList({
   tickets,
   duplicatesRemoved = 0,
   hasActiveFilters = false,
+  selectedIds,
+  onToggle,
+  onSelectAll,
+  isAllSelected = false,
+  isIndeterminate = false,
 }: TicketListProps) {
   if (tickets.length === 0) {
     if (hasActiveFilters) {
@@ -54,13 +64,25 @@ export function TicketList({
       )}
 
       {/* Desktop Table (≥ md) */}
-      <TicketTable tickets={tickets} />
+      <TicketTable
+        tickets={tickets}
+        selectedIds={selectedIds}
+        onToggle={onToggle}
+        onSelectAll={onSelectAll}
+        isAllSelected={isAllSelected}
+        isIndeterminate={isIndeterminate}
+      />
 
       {/* Mobile Stacked List (< md) */}
       <div className="block md:hidden rounded-[6px] border border-slate-200 bg-white overflow-hidden">
         <ul role="list" className="divide-y divide-slate-200">
           {tickets.map((ticket) => (
-            <TicketListItem key={ticket.id} ticket={ticket} />
+            <TicketListItem
+              key={ticket.id}
+              ticket={ticket}
+              isSelected={selectedIds?.has(ticket.id) ?? false}
+              onToggle={onToggle}
+            />
           ))}
         </ul>
       </div>

@@ -1,17 +1,21 @@
 "use client";
 
-// Native <select> is used intentionally:
-// - Lighter than a custom dropdown (no JS for positioning/focus trapping)
-// - Better keyboard and screen-reader support on mobile
-// - Agent identity management (Redux + persistence) arrives in Phase 6
-
-const AGENTS = [
-  { id: "agent-1", name: "Priya" },
-  { id: "agent-2", name: "Rahul" },
-  { id: "agent-3", name: "Meera" },
-] as const;
+import { AGENTS } from "@/data/agents";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import { selectCurrentAgentId } from "@/lib/store/tickets-selectors";
+import { agentSelected } from "@/lib/store/agent-slice";
+import { storeAgentId } from "@/lib/agents/agent-storage";
 
 export function AgentSelect() {
+  const dispatch = useAppDispatch();
+  const currentAgentId = useAppSelector(selectCurrentAgentId);
+
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextId = e.target.value;
+    dispatch(agentSelected(nextId));
+    storeAgentId(nextId);
+  };
+
   return (
     <div className="flex items-center gap-2">
       <label
@@ -22,7 +26,8 @@ export function AgentSelect() {
       </label>
       <select
         id="agent-select"
-        defaultValue="agent-1"
+        value={currentAgentId}
+        onChange={handleChange}
         className={[
           "h-10 min-w-[7rem] rounded border border-[oklch(0.902_0.007_264.5)]",
           "bg-white px-2 py-0 text-sm text-[oklch(0.129_0.014_254.6)]",

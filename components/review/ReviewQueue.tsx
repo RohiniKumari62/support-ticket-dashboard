@@ -6,28 +6,59 @@ import type { Category, Priority, Ticket } from "@/types/ticket";
 import type { TicketsApiClient } from "@/lib/api/tickets-client";
 import { useReviewQueue } from "./useReviewQueue";
 import { ReviewItem } from "./ReviewItem";
+import { useAppSelector } from "@/lib/store/hooks";
+import { selectInFlightAction } from "@/lib/store/tickets-selectors";
 
 export interface ReviewQueueProps {
-  tickets: Ticket[];
-  currentAgentId: string;
+  tickets?: Ticket[];
+  currentAgentId?: string;
   api?: TicketsApiClient;
 }
 
+function ReviewItemRow({
+  ticket,
+  draft,
+  error,
+  onAccept,
+  onChange,
+  subjectLinkRef,
+}: {
+  ticket: Ticket;
+  draft: import("./useReviewQueue").ChangeDraft | null;
+  error: string | null;
+  onAccept: (id: string) => void;
+  onChange: (id: string, input: { category: Category; priority: Priority; reason: string }) => void;
+  subjectLinkRef?: (el: HTMLAnchorElement | null) => void;
+}) {
+  const inFlight = useAppSelector((state) => selectInFlightAction(state, ticket.id));
+  const isSaving = inFlight?.action === "review";
+
+  return (
+    <ReviewItem
+      ticket={ticket}
+      saving={isSaving}
+      error={error}
+      draft={draft}
+      onAccept={onAccept}
+      onChange={onChange}
+      subjectLinkRef={subjectLinkRef}
+    />
+  );
+}
+
 export function ReviewQueue({
-  tickets: initialTickets,
   currentAgentId,
-  api,
-}: ReviewQueueProps) {
+}: ReviewQueueProps = {}) {
   const {
-    visibleItems,
+    tickets,
     remainingCount,
     accept,
     change,
     feedback,
+    drafts,
+    itemErrors,
   } = useReviewQueue({
-    initialTickets,
     currentAgentId,
-    api,
   });
 
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -35,7 +66,7 @@ export function ReviewQueue({
 
   // Track the ID of the last ticket acted upon to shift focus smoothly
   const lastActionIdRef = useRef<string | null>(null);
-  const previousVisibleIdsRef = useRef<string[]>(visibleItems.map((item) => item.ticket.id));
+  const previousVisibleIdsRef = useRef<string[]>(tickets.map((t) => t.id));
 
   const handleAccept = (ticketId: string) => {
     lastActionIdRef.current = ticketId;
@@ -53,7 +84,7 @@ export function ReviewQueue({
   // Focus management after item removal
   useEffect(() => {
     const prevIds = previousVisibleIdsRef.current;
-    const currentIds = visibleItems.map((item) => item.ticket.id);
+    const currentIds = tickets.map((t) => t.id);
     previousVisibleIdsRef.current = currentIds;
 
     const actionId = lastActionIdRef.current;
@@ -76,7 +107,7 @@ export function ReviewQueue({
         }
       }
     }
-  }, [visibleItems]);
+  }, [tickets]);
 
   return (
     <div className="space-y-6 max-w-[1400px]">
@@ -138,13 +169,12 @@ export function ReviewQueue({
         </div>
       ) : (
         <ul className="rounded-[6px] border border-slate-200 bg-white divide-y divide-slate-200 overflow-hidden">
-          {visibleItems.map(({ ticket, saving, error, draft }) => (
-            <ReviewItem
+          {tickets.map((ticket) => (
+            <ReviewItemRow
               key={ticket.id}
               ticket={ticket}
-              saving={saving}
-              error={error}
-              draft={draft}
+              draft={drafts[ticket.id] ?? null}
+              error={itemErrors[ticket.id] ?? null}
               onAccept={handleAccept}
               onChange={handleChange}
               subjectLinkRef={(el) => {

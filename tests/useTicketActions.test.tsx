@@ -1,6 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
+import React from "react";
 import { renderHook, act } from "@testing-library/react";
+import { Provider } from "react-redux";
 import { useTicketActions } from "@/components/tickets/detail/useTicketActions";
+import { makeStore } from "@/lib/store/store";
+import { ticketsSeeded } from "@/lib/store/tickets-slice";
 import type { ApiResult, TicketsApiClient } from "@/lib/api/tickets-client";
 import type { Ticket } from "@/types/ticket";
 
@@ -27,6 +31,12 @@ function createTicket(overrides: Partial<Ticket> = {}): Ticket {
   };
 }
 
+function createWrapper(store: ReturnType<typeof makeStore>) {
+  return function StoreWrapper({ children }: { children: React.ReactNode }) {
+    return <Provider store={store}>{children}</Provider>;
+  };
+}
+
 describe("useTicketActions", () => {
   const currentAgent = "agent-1";
 
@@ -45,12 +55,17 @@ describe("useTicketActions", () => {
     };
 
     const initial = createTicket({ assignedTo: null });
-    const { result } = renderHook(() =>
-      useTicketActions({
-        initialTicket: initial,
-        currentAgentId: currentAgent,
-        api: mockApi,
-      })
+    const store = makeStore(undefined, { api: mockApi });
+    store.dispatch(ticketsSeeded({ tickets: [initial] }));
+
+    const { result } = renderHook(
+      () =>
+        useTicketActions({
+          initialTicket: initial,
+          currentAgentId: currentAgent,
+          api: mockApi,
+        }),
+      { wrapper: createWrapper(store) }
     );
 
     expect(result.current.ticket.assignedTo).toBeNull();
@@ -96,12 +111,17 @@ describe("useTicketActions", () => {
     };
 
     const initial = createTicket({ assignedTo: null });
-    const { result } = renderHook(() =>
-      useTicketActions({
-        initialTicket: initial,
-        currentAgentId: currentAgent,
-        api: mockApi,
-      })
+    const store = makeStore(undefined, { api: mockApi });
+    store.dispatch(ticketsSeeded({ tickets: [initial] }));
+
+    const { result } = renderHook(
+      () =>
+        useTicketActions({
+          initialTicket: initial,
+          currentAgentId: currentAgent,
+          api: mockApi,
+        }),
+      { wrapper: createWrapper(store) }
     );
 
     await act(async () => {
@@ -127,12 +147,17 @@ describe("useTicketActions", () => {
     };
 
     const initial = createTicket({ assignedTo: null });
-    const { result } = renderHook(() =>
-      useTicketActions({
-        initialTicket: initial,
-        currentAgentId: currentAgent,
-        api: mockApi,
-      })
+    const store = makeStore(undefined, { api: mockApi });
+    store.dispatch(ticketsSeeded({ tickets: [initial] }));
+
+    const { result } = renderHook(
+      () =>
+        useTicketActions({
+          initialTicket: initial,
+          currentAgentId: currentAgent,
+          api: mockApi,
+        }),
+      { wrapper: createWrapper(store) }
     );
 
     await act(async () => {
@@ -161,12 +186,17 @@ describe("useTicketActions", () => {
     };
 
     const initial = createTicket({ assignedTo: null });
-    const { result } = renderHook(() =>
-      useTicketActions({
-        initialTicket: initial,
-        currentAgentId: currentAgent,
-        api: mockApi,
-      })
+    const store = makeStore(undefined, { api: mockApi });
+    store.dispatch(ticketsSeeded({ tickets: [initial] }));
+
+    const { result } = renderHook(
+      () =>
+        useTicketActions({
+          initialTicket: initial,
+          currentAgentId: currentAgent,
+          api: mockApi,
+        }),
+      { wrapper: createWrapper(store) }
     );
 
     act(() => {
@@ -199,12 +229,17 @@ describe("useTicketActions", () => {
     };
 
     const initial = createTicket({ assignedTo: null });
-    const { result } = renderHook(() =>
-      useTicketActions({
-        initialTicket: initial,
-        currentAgentId: currentAgent,
-        api: mockApi,
-      })
+    const store = makeStore(undefined, { api: mockApi });
+    store.dispatch(ticketsSeeded({ tickets: [initial] }));
+
+    const { result } = renderHook(
+      () =>
+        useTicketActions({
+          initialTicket: initial,
+          currentAgentId: currentAgent,
+          api: mockApi,
+        }),
+      { wrapper: createWrapper(store) }
     );
 
     act(() => {
@@ -233,12 +268,17 @@ describe("useTicketActions", () => {
     };
 
     const initial = createTicket({ status: "open", assignedTo: currentAgent });
-    const { result } = renderHook(() =>
-      useTicketActions({
-        initialTicket: initial,
-        currentAgentId: currentAgent,
-        api: mockSuccessApi,
-      })
+    const store = makeStore(undefined, { api: mockSuccessApi });
+    store.dispatch(ticketsSeeded({ tickets: [initial] }));
+
+    const { result } = renderHook(
+      () =>
+        useTicketActions({
+          initialTicket: initial,
+          currentAgentId: currentAgent,
+          api: mockSuccessApi,
+        }),
+      { wrapper: createWrapper(store) }
     );
 
     await act(async () => {
@@ -260,12 +300,17 @@ describe("useTicketActions", () => {
       submitReview: vi.fn(),
     };
 
-    const { result: failResult } = renderHook(() =>
-      useTicketActions({
-        initialTicket: initial,
-        currentAgentId: currentAgent,
-        api: mockFailApi,
-      })
+    const storeFail = makeStore(undefined, { api: mockFailApi });
+    storeFail.dispatch(ticketsSeeded({ tickets: [initial] }));
+
+    const { result: failResult } = renderHook(
+      () =>
+        useTicketActions({
+          initialTicket: initial,
+          currentAgentId: currentAgent,
+          api: mockFailApi,
+        }),
+      { wrapper: createWrapper(storeFail) }
     );
 
     await act(async () => {
@@ -297,12 +342,17 @@ describe("useTicketActions", () => {
     };
 
     const initial = createTicket();
-    const { result } = renderHook(() =>
-      useTicketActions({
-        initialTicket: initial,
-        currentAgentId: currentAgent,
-        api: mockApi,
-      })
+    const store = makeStore(undefined, { api: mockApi });
+    store.dispatch(ticketsSeeded({ tickets: [initial] }));
+
+    const { result } = renderHook(
+      () =>
+        useTicketActions({
+          initialTicket: initial,
+          currentAgentId: currentAgent,
+          api: mockApi,
+        }),
+      { wrapper: createWrapper(store) }
     );
 
     // 1. Success

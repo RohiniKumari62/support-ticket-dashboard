@@ -4,8 +4,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Ticket, TicketStatus } from "@/types/ticket";
 import { getAgentName } from "@/data/agents";
 import { getStatusLabel } from "@/lib/tickets/labels";
-import { reconcileTicket } from "@/lib/tickets/reconcile";
-import { ticketsApiClient, type TicketsApiClient } from "@/lib/api/tickets-client";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import {
+  selectInFlightAction,
+  selectTicketById,
+} from "@/lib/store/tickets-selectors";
+import {
+  claimTicketThunk,
+  changeStatusThunk,
+  retriageTicketThunk,
+} from "@/lib/store/tickets-thunks";
+import { ticketReceivedFromServer } from "@/lib/store/tickets-slice";
+import {
+  formatClaimConflictMessage,
+  formatClaimErrorMessage,
+  formatStatusErrorMessage,
+} from "@/lib/tickets/action-messages";
+import type { TicketsApiClient } from "@/lib/api/tickets-client";
 
 export type PendingActionType = "claim" | "status" | "retriage" | null;
 
@@ -15,163 +30,141 @@ export interface ActionFeedback {
 }
 
 export interface UseTicketActionsProps {
-  initialTicket: Ticket;
+  initialTicket?: Ticket;
+  ticketId?: string;
   currentAgentId: string;
   api?: TicketsApiClient;
 }
 
 export function useTicketActions({
   initialTicket,
+  ticketId: propTicketId,
   currentAgentId,
-  api = ticketsApiClient,
 }: UseTicketActionsProps) {
-  const [ticket, setTicket] = useState<Ticket>(initialTicket);
-  const [pendingAction, setPendingAction] = useState<PendingActionType>(null);
+  const dispatch = useAppDispatch();
+  const id = propTicketId ?? initialTicket?.id ?? "";
+
+  const storeTicket = useAppSelector((state) => selectTicketById(state, id));
+  const inFlight = useAppSelector((state) => selectInFlightAction(state, id));
+
+  const ticket = storeTicket ?? initialTicket ?? ({} as Ticket);
+  const pendingAction: PendingActionType =
+    inFlight && (inFlight.action === "claim" || inFlight.action === "status" || inFlight.action === "retriage")
+      ? (inFlight.action as PendingActionType)
+      : null;
+
   const [feedback, setFeedback] = useState<ActionFeedback | null>(null);
 
-  // Synchronous lock ref to prevent rapid double-clicks from making duplicate API calls
-  const isLockedRef = useRef(false);
-  const ticketRef = useRef(ticket);
+  // Track previous assignedTo to detect external claims while viewing
+  const prevAssignedToRef = useRef<string | null>(ticket.assignedTo ?? null);
 
   useEffect(() => {
-    ticketRef.current = ticket;
-  }, [ticket]);
+    const prev = prevAssignedToRef.current;
+    const current = ticket.assignedTo ?? null;
+    prevAssignedToRef.current = current;
+
+    // Detect if another valid agent claimed the ticket while we were viewing it without active local inFlight
+    if (
+      prev !== current &&
+      current !== null &&
+      current !== currentAgentId &&
+      !inFlight
+    ) {
+      const winnerName = getAgentName(current) ?? "Another agent";
+      setFeedback({
+        kind: "info",
+        text: `${winnerName} claimed this ticket while you were viewing it.`,
+      });
+    }
+  }, [ticket.assignedTo, currentAgentId, inFlight]);
 
   const handleClaim = useCallback(async () => {
-    if (isLockedRef.current) return;
-    isLockedRef.current = true;
-    setPendingAction("claim");
+    if (!ticket.id) return;
+    const action = await dispatch(
+      claimTicketThunk({ ticketId: ticket.id, agentId: currentAgentId })
+    );
 
-    const snapshot = ticketRef.current;
-    // Optimistic update
-    setTicket((prev) => ({ ...prev, assignedTo: currentAgentId }));
-
-    try {
-      const res = await api.claimTicket(snapshot.id, currentAgentId, snapshot);
-      if (res.ok) {
-        setTicket(res.ticket);
+    if (claimTicketThunk.fulfilled.match(action)) {
+      setFeedback({
+        kind: "success",
+        text: "Ticket claimed successfully.",
+      });
+    } else if (claimTicketThunk.rejected.match(action)) {
+      if (action.meta.condition) {
+        // Ignored by condition check (e.g. duplicate click)
+        return;
+      }
+      const payload = action.payload;
+      if (payload?.code === "conflict" && payload.assignedTo) {
         setFeedback({
-          kind: "success",
-          text: "Ticket claimed successfully.",
+          kind: "error",
+          text: formatClaimConflictMessage(payload.assignedTo),
         });
       } else {
-        if (res.code === "conflict" && res.assignedTo) {
-          const winner = res.assignedTo;
-          const winnerName = getAgentName(winner) ?? "Another agent";
-          setTicket({ ...snapshot, assignedTo: winner });
-          setFeedback({
-            kind: "error",
-            text: `Couldn't claim: ${winnerName} already claimed this ticket.`,
-          });
-        } else {
-          setTicket(snapshot);
-          setFeedback({
-            kind: "error",
-            text:
-              res.message ||
-              "Couldn't claim this ticket. Nothing was changed. Try again.",
-          });
-        }
+        setFeedback({
+          kind: "error",
+          text: formatClaimErrorMessage(payload?.message),
+        });
       }
-    } catch {
-      setTicket(snapshot);
-      setFeedback({
-        kind: "error",
-        text: "Couldn't claim this ticket. Nothing was changed. Try again.",
-      });
-    } finally {
-      isLockedRef.current = false;
-      setPendingAction(null);
     }
-  }, [api, currentAgentId]);
+  }, [currentAgentId, dispatch, ticket.id]);
 
   const handleStatusChange = useCallback(
     async (targetStatus: TicketStatus) => {
-      if (isLockedRef.current) return;
-      isLockedRef.current = true;
-      setPendingAction("status");
+      if (!ticket.id) return;
+      const action = await dispatch(
+        changeStatusThunk({
+          ticketId: ticket.id,
+          status: targetStatus,
+          agentId: currentAgentId,
+        })
+      );
 
-      const snapshot = ticketRef.current;
-      // Optimistic update
-      setTicket((prev) => ({ ...prev, status: targetStatus }));
-
-      try {
-        const res = await api.changeTicketStatus(snapshot.id, targetStatus, snapshot);
-        if (res.ok) {
-          setTicket(res.ticket);
-          setFeedback({
-            kind: "success",
-            text: `Status updated to ${getStatusLabel(targetStatus).toLowerCase()}.`,
-          });
-        } else {
-          setTicket(snapshot);
-          setFeedback({
-            kind: "error",
-            text:
-              res.message ||
-              "Couldn't update status. Nothing was changed. Try again.",
-          });
+      if (changeStatusThunk.fulfilled.match(action)) {
+        setFeedback({
+          kind: "success",
+          text: `Status updated to ${getStatusLabel(targetStatus).toLowerCase()}.`,
+        });
+      } else if (changeStatusThunk.rejected.match(action)) {
+        if (action.meta.condition) {
+          return;
         }
-      } catch {
-        setTicket(snapshot);
+        const payload = action.payload;
         setFeedback({
           kind: "error",
-          text: "Couldn't update status. Nothing was changed. Try again.",
+          text: formatStatusErrorMessage(payload?.message),
         });
-      } finally {
-        isLockedRef.current = false;
-        setPendingAction(null);
       }
     },
-    [api]
+    [currentAgentId, dispatch, ticket.id]
   );
 
   const handleRetriage = useCallback(async () => {
-    if (isLockedRef.current) return;
-    isLockedRef.current = true;
-    setPendingAction("retriage");
+    if (!ticket.id) return;
+    const action = await dispatch(retriageTicketThunk({ ticketId: ticket.id }));
 
-    const current = ticketRef.current;
-
-    try {
-      const res = await api.retriageTicket(current.id, current);
-      if (res.ok) {
-        setTicket(res.ticket);
-        setFeedback({
-          kind: "success",
-          text: "AI review re-run completed.",
-        });
-      } else {
-        setFeedback({
-          kind: "error",
-          text: res.message || "AI review failed. The ticket was not changed.",
-        });
+    if (retriageTicketThunk.fulfilled.match(action)) {
+      setFeedback({
+        kind: "success",
+        text: "AI review re-run completed.",
+      });
+    } else if (retriageTicketThunk.rejected.match(action)) {
+      if (action.meta.condition) {
+        return;
       }
-    } catch {
+      const payload = action.payload;
       setFeedback({
         kind: "error",
-        text: "AI review failed. The ticket was not changed.",
+        text: payload?.message || "AI review failed. The ticket was not changed.",
       });
-    } finally {
-      isLockedRef.current = false;
-      setPendingAction(null);
     }
-  }, [api]);
+  }, [dispatch, ticket.id]);
 
   const applyServerTicket = useCallback(
     (incoming: Ticket) => {
-      const result = reconcileTicket(
-        ticketRef.current,
-        incoming,
-        currentAgentId,
-        { isClaimPending: pendingAction === "claim" }
-      );
-      setTicket(result.ticket);
-      if (result.notice) {
-        setFeedback(result.notice);
-      }
+      dispatch(ticketReceivedFromServer(incoming));
     },
-    [currentAgentId, pendingAction]
+    [dispatch]
   );
 
   return {

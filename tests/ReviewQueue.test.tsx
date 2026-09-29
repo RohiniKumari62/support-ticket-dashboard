@@ -1,22 +1,30 @@
 import { describe, it, expect } from "vitest";
+import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { Provider } from "react-redux";
 import { ReviewQueue } from "@/components/review/ReviewQueue";
 import { normalizeTickets } from "@/lib/tickets/normalize";
-import { getReviewQueue } from "@/lib/tickets/review";
 import { TEST_TICKETS } from "@/data/test-tickets";
+import { makeStore } from "@/lib/store/store";
+import { ticketsSeeded } from "@/lib/store/tickets-slice";
 import type { Ticket } from "@/types/ticket";
 
 describe("ReviewQueue rendering", () => {
   const fixedNow = new Date("2026-09-29T12:00:00Z");
   const { tickets } = normalizeTickets(TEST_TICKETS, fixedNow);
-  const queue = getReviewQueue(tickets);
 
-  const currentAgent = "agent-1";
+  function renderWithStore(queueTickets: Ticket[]) {
+    const store = makeStore();
+    store.dispatch(ticketsSeeded({ tickets: queueTickets }));
+    return renderToStaticMarkup(
+      <Provider store={store}>
+        <ReviewQueue />
+      </Provider>
+    );
+  }
 
   it("T-2003: shows the flagged-input warning and its subject/summary as escaped plain text", () => {
-    const html = renderToStaticMarkup(
-      <ReviewQueue tickets={queue} currentAgentId={currentAgent} />
-    );
+    const html = renderWithStore(tickets);
 
     expect(html).toContain("The AI flagged this ticket for suspicious content. Read it before accepting.");
     expect(html).toContain("Screenshot of the error");
@@ -24,18 +32,14 @@ describe("ReviewQueue rendering", () => {
   });
 
   it("T-2004: shows 'Invalid value' for category and priority and a DISABLED Accept button with its reason", () => {
-    const html = renderToStaticMarkup(
-      <ReviewQueue tickets={queue} currentAgentId={currentAgent} />
-    );
+    const html = renderWithStore(tickets);
 
     expect(html).toContain("Invalid value");
     expect(html).toContain("Invalid AI values — use Change");
   });
 
   it("T-2006: shows '(No subject)', 'No summary' and the empty-ticket warning", () => {
-    const html = renderToStaticMarkup(
-      <ReviewQueue tickets={queue} currentAgentId={currentAgent} />
-    );
+    const html = renderWithStore(tickets);
 
     expect(html).toContain("(No subject)");
     expect(html).toContain("No summary");
@@ -43,9 +47,7 @@ describe("ReviewQueue rendering", () => {
   });
 
   it("T-2012: appears in the queue", () => {
-    const html = renderToStaticMarkup(
-      <ReviewQueue tickets={queue} currentAgentId={currentAgent} />
-    );
+    const html = renderWithStore(tickets);
 
     expect(html).toContain("T-2012");
     expect(html).toContain("Account locked");
@@ -73,9 +75,7 @@ describe("ReviewQueue rendering", () => {
       humanReview: null,
     };
 
-    const html = renderToStaticMarkup(
-      <ReviewQueue tickets={[hostileTicket]} currentAgentId={currentAgent} />
-    );
+    const html = renderWithStore([hostileTicket]);
 
     expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
     expect(html).not.toMatch(/<img\s/i);
@@ -104,17 +104,13 @@ describe("ReviewQueue rendering", () => {
       humanReview: null,
     };
 
-    const html = renderToStaticMarkup(
-      <ReviewQueue tickets={[enterpriseTicket]} currentAgentId={currentAgent} />
-    );
+    const html = renderWithStore([enterpriseTicket]);
 
     expect(html).toContain("Enterprise tickets must stay at P1 or higher.");
   });
 
   it("an empty queue renders the empty state with a link back to /tickets", () => {
-    const html = renderToStaticMarkup(
-      <ReviewQueue tickets={[]} currentAgentId={currentAgent} />
-    );
+    const html = renderWithStore([]);
 
     expect(html).toContain("No tickets need review");
     expect(html).toContain("Back to tickets");

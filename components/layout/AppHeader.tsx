@@ -1,5 +1,6 @@
 import { NavLinks } from "./NavLinks";
 import { AgentSelect } from "./AgentSelect";
+import { HeaderCounts } from "./HeaderCounts";
 
 // Server component — no interactivity needed at this level.
 // NavLinks and AgentSelect are client components and handle their own state.
@@ -10,10 +11,10 @@ export function AppHeader() {
         {/*
          * Desktop (≥ sm): single row
          *   - Left: Brand + NavLinks
-         *   - Right: My tickets (–) + AgentSelect
+         *   - Right: My tickets (N) + AgentSelect
          * Mobile (< sm): two rows
          *   - Row 1: Brand + AgentSelect
-         *   - Row 2: NavLinks + My tickets (–)
+         *   - Row 2: NavLinks + My tickets (N)
          */}
         <div className="flex flex-wrap items-center justify-between min-h-[48px] py-1 gap-y-1 sm:gap-y-0">
           {/* Brand — order 1 on mobile & desktop */}
@@ -36,12 +37,7 @@ export function AppHeader() {
 
           {/* My tickets — order 4 on mobile (bottom right), order 3 on desktop (right-aligned before agent) */}
           <div className="order-4 sm:order-3 sm:ml-auto sm:mr-4">
-            <span
-              className="inline-flex items-center h-10 text-sm text-[oklch(0.44_0.019_264.4)] whitespace-nowrap tabular"
-              aria-label="My tickets count placeholder"
-            >
-              My tickets (–)
-            </span>
+            <HeaderCounts />
           </div>
         </div>
       </div>
