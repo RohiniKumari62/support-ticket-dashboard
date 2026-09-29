@@ -44,4 +44,25 @@ describe("TicketList security and safe rendering", () => {
       screen.getByText("There are currently no tickets matching your view.")
     ).toBeInTheDocument();
   });
+
+  it("renders no-match empty state when hasActiveFilters is true", () => {
+    const html = renderToStaticMarkup(
+      <TicketList tickets={[]} hasActiveFilters={true} />
+    );
+
+    expect(html).toContain("No tickets match your filters");
+    // Must include a link back to /tickets
+    expect(html).toContain('href="/tickets"');
+  });
+
+  it("no-match state: hostile content from T-2002/T-2011 remains escaped in non-empty list", () => {
+    const html = renderToStaticMarkup(
+      <TicketList tickets={tickets} duplicatesRemoved={duplicatesRemoved} />
+    );
+
+    // No real <img elements or onerror= attributes in the output
+    expect(html).not.toMatch(/<img\s/i);
+    expect(html).not.toContain("onerror=");
+    expect(html).not.toContain("javascript:");
+  });
 });

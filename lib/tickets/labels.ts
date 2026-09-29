@@ -1,4 +1,4 @@
-import type { Category, Plan, Priority, TicketStatus } from "@/types/ticket";
+import type { Category, Plan, Priority, TicketStatus, TriageDecision } from "@/types/ticket";
 
 export const PLAN_LABELS: Record<Plan, string> = {
   free: "Free",
@@ -47,3 +47,16 @@ export function getStatusLabel(status: TicketStatus | null | undefined): string 
   if (!status || !(status in STATUS_LABELS)) return "Unknown";
   return STATUS_LABELS[status];
 }
+
+export const TRIAGE_DECISION_LABELS: Record<TriageDecision, string> = {
+  auto_accept: "Auto-accepted",
+  manual_review: "Needs review",
+};
+
+export function getTriageDecisionLabel(
+  decision: TriageDecision | null | undefined
+): string {
+  if (!decision || !(decision in TRIAGE_DECISION_LABELS)) return "Unknown";
+  return TRIAGE_DECISION_LABELS[decision];
+}
+

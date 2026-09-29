@@ -2,18 +2,27 @@ import type { Metadata } from "next";
 import { RAW_TICKETS } from "@/data/mock-tickets";
 import { normalizeTickets } from "@/lib/tickets/normalize";
 import { sortTickets } from "@/lib/tickets/sort";
+import { filterTickets, hasActiveFilters, parseTicketFilters } from "@/lib/tickets/filters";
+import { TicketFilters } from "@/components/tickets/TicketFilters";
 import { TicketList } from "@/components/tickets/TicketList";
 
 export const metadata: Metadata = {
   title: "Tickets",
 };
 
-export default function TicketsPage() {
-  const { tickets, duplicatesRemoved } = normalizeTickets(
-    RAW_TICKETS,
-    new Date()
-  );
+interface TicketsPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function TicketsPage({ searchParams }: TicketsPageProps) {
+  const params = await searchParams;
+  const filters = parseTicketFilters(params);
+
+  const { tickets, duplicatesRemoved } = normalizeTickets(RAW_TICKETS, new Date());
   const sortedTickets = sortTickets(tickets);
+  const filteredTickets = filterTickets(sortedTickets, filters);
+
+  const filtersActive = hasActiveFilters(filters);
 
   return (
     <div className="space-y-4">
@@ -26,9 +35,16 @@ export default function TicketsPage() {
         </p>
       </div>
 
+      <TicketFilters
+        filters={filters}
+        totalCount={sortedTickets.length}
+        resultCount={filteredTickets.length}
+      />
+
       <TicketList
-        tickets={sortedTickets}
+        tickets={filteredTickets}
         duplicatesRemoved={duplicatesRemoved}
+        hasActiveFilters={filtersActive}
       />
     </div>
   );

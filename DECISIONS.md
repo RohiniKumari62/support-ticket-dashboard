@@ -153,4 +153,20 @@ Prompt 1 assumed a src/ folder, but the project uses a root app/ folder. Noticed
 - **Static Deadlines in Phase 2**: Deadlines are calculated and displayed as fixed dates; countdown tickers and dynamic late/at-risk/on-track styling are slated for Phase 7.
 - **Loading and Error States**: Local mock data is synchronous, so async loading and error UI states are deferred to Phase 8 when HTTP client fetching is implemented; an empty state component is provided for empty queues.
 - **Enterprise Minimum Priority Rule**: The rule requiring Enterprise tickets to be at least P1 is not enforced destructively in the raw data layer; it will be validated and enforced by the API in Phase 8 and the review form in Phase 5.
+
+## Phase 3: Search + Filters + URL State Decisions
+
+- **URL as Single Source of Truth**: Filter state (q, status, priority, category, decision) lives entirely in the URL query string. No Redux slice for filter state in this phase; the server component reads `searchParams` directly and the `TicketFilters` client component pushes updates via `router.replace`/`router.push`.
+- **Server-side Filtering**: Filtering is applied server-side by the `TicketFilters` page in Phase 3 using the mock in-memory data. The same `filterTickets` pure function will be usable in Phase 8 when replaced with API query-string forwarding.
+- **parseTicketFilters Safety**: URL parameters are treated as untrusted user input. Unknown enum values silently become `null` (treated as "All"). The `q` parameter is trimmed, has internal whitespace collapsed, and is capped at 100 characters. The function never throws.
+- **Native `<select>` for Filters**: Radix/shadcn Select was intentionally skipped. Native `<select>` provides full keyboard nav, mobile OS sheet pickers, and zero JS weight.
+- **300 ms Debounce on Search**: The text input updates local React state immediately for responsiveness. A `setTimeout`-based 300 ms debounce controls URL navigation, preventing excessive renders and Next.js transitions. The debounce is cleaned up on unmount. Pressing Enter applies the search immediately.
+- **`useTransition` for Non-blocking Navigation**: Filter select changes and debounced search pushes are wrapped in `startTransition` so they never block high-priority UI interactions; the `aria-busy` attribute signals loading to assistive technologies.
+- **Two Empty States**: `TicketList` distinguishes "no tickets at all" (global empty state) from "no tickets match the active filters" (filter empty state). The filter empty state includes a "Clear filters" link back to `/tickets`.
+- **`serializeTicketFilters` Stable Order**: Params are written in a fixed order (`q, status, priority, category, decision`) so serialized URLs are deterministic and comparable in tests.
+- **Searchable Fields**: Only `subject` and `body` are searched per assignment spec (A14). The `summary`, `reviewReason`, and customer ID are intentionally excluded.
+- **Null-body Safety**: `filterTickets` checks `ticket.body != null` before calling `.toLowerCase()`, preventing crashes on tickets with null bodies (e.g. T-2006).
+- **Result Count Bar**: A `role="status" aria-live="polite"` paragraph shows "Showing N of M tickets" when any filter is active, or "Showing N tickets" when no filter is active, replacing the previous per-component count display.
+- **DECISION_LABELS Re-export**: `TRIAGE_DECISION_LABELS` and `getTriageDecisionLabel` were added to `lib/tickets/labels.ts` to match the pattern for status/priority/category, keeping all display-name logic in a single file.
+
 
