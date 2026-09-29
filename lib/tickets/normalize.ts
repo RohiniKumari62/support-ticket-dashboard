@@ -229,3 +229,5 @@ export function normalizeTickets(
 
   return { tickets, duplicatesRemoved };
 }
+
+export { getNormalizedTickets, getTicketById } from "./data";

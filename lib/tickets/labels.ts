@@ -60,3 +60,38 @@ export function getTriageDecisionLabel(
   return TRIAGE_DECISION_LABELS[decision];
 }
 
+export const REVIEW_REASON_LABELS: Record<string, string> = {
+  flagged_input: "The AI flagged suspicious content in this ticket",
+  invalid_output: "The AI returned invalid values",
+  empty_ticket: "The ticket is empty",
+  rule_adjusted: "A business rule changed the AI's priority",
+};
+
+export function getReviewReasonLabel(
+  reason: string | null | undefined
+): string {
+  if (!reason) return "";
+  return REVIEW_REASON_LABELS[reason] ?? reason;
+}
+
+export const DATA_ISSUE_LABELS: Record<string, string> = {
+  empty_subject: "empty subject",
+  empty_body: "empty body",
+  invalid_plan: "invalid plan",
+  invalid_category: "invalid category",
+  invalid_priority: "invalid priority",
+  invalid_status: "invalid status",
+  invalid_agent: "unknown agent",
+  invalid_triage_decision: "invalid triage decision",
+  unsafe_attachment_url: "unsafe attachment URL",
+  assumed_utc: "assumed UTC time",
+  invalid_created_at: "invalid created time",
+  future_created_at: "future created time",
+};
+
+export function formatDataIssues(issues: string[]): string {
+  if (!issues || issues.length === 0) return "";
+  const readable = issues.map((i) => DATA_ISSUE_LABELS[i] ?? i.replace(/_/g, " "));
+  return `This ticket has data problems: ${readable.join(", ")}.`;
+}
+

@@ -34,13 +34,20 @@ npm run dev
 ## Folder Overview
 
 - `app/`: Next.js App Router pages and layouts (no `src/`)
-- `components/`: Reusable React components (`layout/`, `components/tickets/`, `review/`, `ui/`)
+- `components/`: Reusable React components (`layout/`, `tickets/`, `tickets/detail/`, `review/`, `ui/`)
 - `store/`: Redux Toolkit store and feature slices
-- `lib/`: API client wrappers, normalization and helpers (`lib/tickets/`), utilities
+- `lib/`: API client wrappers (`lib/api/tickets-client.ts`), normalization and helpers (`lib/tickets/`, `lib/tickets/transitions.ts`), utilities
 - `data/`: Seed data, test tickets, and mock data (`data/`)
 - `types/`: Shared TypeScript types and interfaces (`types/ticket.ts`)
 - `validation/`: Plain TypeScript validators and business rules (no Zod)
 - `tests/`: Vitest test files
+
+## Temporary Mock Failure Rules (Manual Testing)
+
+During Phase 4, `lib/api/tickets-client.ts` uses deterministic mock failure rules with fixed 600 ms latency:
+- **Claim conflict (409)**: Triggered when the numeric portion of the ticket ID is divisible by 4 (e.g. `T-2008`, `T-2012`), returning winner `agent-2` (Rahul).
+- **Status network failure**: Triggered when the numeric portion of the ticket ID is divisible by 7 (e.g. `T-2002`).
+These rules will be replaced by the fake API with chaos controls in Phase 8.
 
 ## Status
 
