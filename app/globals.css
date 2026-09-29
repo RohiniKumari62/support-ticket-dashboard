@@ -1,26 +1,189 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
+/* ─── Tailwind v4 theme bridge ──────────────────────────────────────────── */
 @theme inline {
+  /* Surfaces & text */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  /* Brand / accent */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  /* Supporting */
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+
+  /* Borders & inputs */
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Sidebar (kept from shadcn init) */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Deadline semantic colors */
+  --color-deadline-late: var(--deadline-late);
+  --color-deadline-late-bg: var(--deadline-late-bg);
+  --color-deadline-risk: var(--deadline-risk);
+  --color-deadline-risk-bg: var(--deadline-risk-bg);
+  --color-deadline-ok: var(--deadline-ok);
+  --color-deadline-ok-bg: var(--deadline-ok-bg);
+
+  /* Typography */
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-inter);
+
+  /* Radius — max 6px, no excessive rounding */
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 6px;
+  --radius-2xl: 6px;
+  --radius-3xl: 6px;
+  --radius-4xl: 6px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ─── Design tokens ─────────────────────────────────────────────────────── */
+:root {
+  /* Page & surfaces */
+  --background: oklch(0.976 0.002 247.8);   /* slate-50  */
+  --foreground: oklch(0.129 0.014 254.6);   /* slate-900 */
+  --card:        oklch(1 0 0);              /* white     */
+  --card-foreground: oklch(0.129 0.014 254.6);
+  --popover:     oklch(1 0 0);
+  --popover-foreground: oklch(0.129 0.014 254.6);
+
+  /* Accent: blue-600 — links, focus, primary button */
+  --primary:          oklch(0.546 0.245 262.9);  /* blue-600 */
+  --primary-foreground: oklch(1 0 0);
+
+  /* Secondary / supporting */
+  --secondary:            oklch(0.968 0.003 264.5);  /* slate-100 */
+  --secondary-foreground: oklch(0.129 0.014 254.6);
+  --muted:                oklch(0.968 0.003 264.5);
+  --muted-foreground:     oklch(0.44 0.019 264.4);   /* slate-600 */
+  --accent:               oklch(0.968 0.003 264.5);
+  --accent-foreground:    oklch(0.129 0.014 254.6);
+
+  /* Borders & inputs */
+  --border: oklch(0.902 0.007 264.5);   /* slate-200 */
+  --input:  oklch(0.902 0.007 264.5);
+  --ring:   oklch(0.546 0.245 262.9);   /* blue-600 focus ring */
+
+  /* Destructive */
+  --destructive: oklch(0.628 0.258 29.2);  /* red-600 */
+
+  /* Radius baseline */
+  --radius: 6px;
+
+  /* Sidebar (keep compatible with shadcn components) */
+  --sidebar:                     oklch(0.968 0.003 264.5);
+  --sidebar-foreground:          oklch(0.129 0.014 254.6);
+  --sidebar-primary:             oklch(0.546 0.245 262.9);
+  --sidebar-primary-foreground:  oklch(1 0 0);
+  --sidebar-accent:              oklch(0.902 0.007 264.5);
+  --sidebar-accent-foreground:   oklch(0.129 0.014 254.6);
+  --sidebar-border:              oklch(0.902 0.007 264.5);
+  --sidebar-ring:                oklch(0.546 0.245 262.9);
+
+  /* ── Deadline semantic tokens ────────────────────────────── */
+  /* red  = late / P0 */
+  --deadline-late:    oklch(0.628 0.258 29.2);
+  --deadline-late-bg: oklch(0.971 0.013 17.4);   /* red-50 tint */
+  /* amber = at risk */
+  --deadline-risk:    oklch(0.666 0.179 58.3);
+  --deadline-risk-bg: oklch(0.987 0.022 95.3);   /* amber-50 tint */
+  /* green = on track / success */
+  --deadline-ok:      oklch(0.523 0.177 151.7);
+  --deadline-ok-bg:   oklch(0.982 0.018 155.8);  /* green-50 tint */
+}
+
+/* ─── Base styles ───────────────────────────────────────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    border-color: var(--border);
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  html {
+    font-size: 14px;
+    -webkit-text-size-adjust: 100%;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.5;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Tabular numbers for timestamps, counts, and countdowns */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Visible focus ring on every interactive element */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Skip link — visible only on focus */
+  .skip-link {
+    position: absolute;
+    top: -100%;
+    left: 16px;
+    z-index: 9999;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    padding: 8px 16px;
+    border-radius: 0 0 6px 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: top 0.1s;
+  }
+
+  .skip-link:focus {
+    top: 0;
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  a {
+    color: var(--primary);
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
 }

@@ -13,6 +13,12 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Security: customer content must never be injected as raw HTML.
+  {
+    rules: {
+      "react/no-danger": "error",
+    },
+  },
 ]);
 
 export default eslintConfig;
