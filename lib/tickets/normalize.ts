@@ -197,6 +197,7 @@ export function normalizeTicket(raw: RawTicket, now: Date): Ticket {
     reviewReason:
       typeof raw.review_reason === "string" ? raw.review_reason : null,
     dataIssues: issues,
+    humanReview: null,
   };
 }
 

@@ -3,12 +3,19 @@ import { getAgentName, isValidAgentId } from "@/data/agents";
 import { canTransition } from "@/lib/tickets/transitions";
 import { applyEnterpriseFloor } from "@/lib/tickets/rules";
 import { getTicketById } from "@/lib/tickets/data";
+import {
+  applyReview,
+  isAcceptable,
+  type ReviewDecision,
+  validateReviewChange,
+} from "@/lib/tickets/review";
 
 export type ApiErrorCode =
   | "conflict"
   | "invalid_transition"
   | "network"
-  | "unprocessable";
+  | "unprocessable"
+  | "validation";
 
 export type ApiResult<T> =
   | { ok: true; ticket: T }
@@ -17,6 +24,7 @@ export type ApiResult<T> =
       code: ApiErrorCode;
       message: string;
       assignedTo?: string;
+      errors?: Record<string, string | undefined>;
     };
 
 export interface TicketsApiClient {
@@ -33,6 +41,11 @@ export interface TicketsApiClient {
   retriageTicket(
     ticketId: string,
     ticket: Ticket
+  ): Promise<ApiResult<Ticket>>;
+  submitReview(
+    ticket: Ticket,
+    decision: ReviewDecision,
+    reviewerId: string
   ): Promise<ApiResult<Ticket>>;
 }
 
@@ -59,7 +72,15 @@ function extractNumericId(ticketId: string): number {
  *    numeric part of the ticket id is divisible by 4 (e.g. T-2008, T-2012).
  * 2. Status change returns "network" failure when the numeric part of the ticket id
  *    is divisible by 7 (e.g. T-2002).
+ * 3. Review submit: for tickets whose numeric part is divisible by 6 (e.g. T-2004),
+ *    the FIRST submit in the page session returns "network"; the retry succeeds.
  * ========================================================================= */
+
+const failedReviewAttempts = new Set<string>();
+
+export function resetMockReviewFailures(): void {
+  failedReviewAttempts.clear();
+}
 
 class MockTicketsApiClient implements TicketsApiClient {
   async claimTicket(
@@ -263,6 +284,76 @@ class MockTicketsApiClient implements TicketsApiClient {
       reviewReason,
       summary,
     };
+
+    return {
+      ok: true,
+      ticket: updated,
+    };
+  }
+
+  async submitReview(
+    ticket: Ticket,
+    decision: ReviewDecision,
+    reviewerId: string
+  ): Promise<ApiResult<Ticket>> {
+    await sleep(MOCK_LATENCY_MS);
+
+    // 1. Reviewer validation
+    if (!isValidAgentId(reviewerId)) {
+      return {
+        ok: false,
+        code: "validation",
+        message: "Invalid reviewer ID.",
+      };
+    }
+
+    // 2. Ticket state validation: must be manual_review and not already reviewed
+    if (ticket.triageDecision !== "manual_review" || ticket.humanReview) {
+      return {
+        ok: false,
+        code: "conflict",
+        message: "This ticket was already handled.",
+      };
+    }
+
+    // 3. Decision-specific validation
+    if (decision.type === "accept") {
+      if (!isAcceptable(ticket)) {
+        return {
+          ok: false,
+          code: "validation",
+          message: "Invalid AI values cannot be accepted. Use Change.",
+        };
+      }
+    } else if (decision.type === "change") {
+      const valResult = validateReviewChange(ticket, {
+        category: decision.category,
+        priority: decision.priority,
+        reason: decision.reason,
+      });
+
+      if (!valResult.ok) {
+        return {
+          ok: false,
+          code: "validation",
+          message: "Validation failed.",
+          errors: valResult.errors,
+        };
+      }
+    }
+
+    // 4. Deterministic network failure rule: ticket number % 6 === 0 fails on first attempt (e.g. T-2004)
+    const num = extractNumericId(ticket.id);
+    if (num > 0 && num % 6 === 0 && !failedReviewAttempts.has(ticket.id)) {
+      failedReviewAttempts.add(ticket.id);
+      return {
+        ok: false,
+        code: "network",
+        message: "Network error: could not submit review. Try again.",
+      };
+    }
+
+    const updated = applyReview(ticket, decision, reviewerId);
 
     return {
       ok: true,

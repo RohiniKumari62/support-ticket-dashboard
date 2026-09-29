@@ -51,6 +51,12 @@ export interface RawTicket {
   [key: string]: unknown;
 }
 
+export interface HumanReview {
+  action: "accepted" | "changed";
+  reviewedBy: string;
+  note: string | null;
+}
+
 export interface Ticket {
   id: string;
   customerId: string;
@@ -69,4 +75,5 @@ export interface Ticket {
   triageDecision: TriageDecision;
   reviewReason: string | null;
   dataIssues: TicketDataIssue[];
+  humanReview?: HumanReview | null;
 }

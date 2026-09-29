@@ -41,6 +41,7 @@ describe("useTicketActions", () => {
       ),
       changeTicketStatus: vi.fn(),
       retriageTicket: vi.fn(),
+      submitReview: vi.fn(),
     };
 
     const initial = createTicket({ assignedTo: null });
@@ -91,6 +92,7 @@ describe("useTicketActions", () => {
       }),
       changeTicketStatus: vi.fn(),
       retriageTicket: vi.fn(),
+      submitReview: vi.fn(),
     };
 
     const initial = createTicket({ assignedTo: null });
@@ -121,6 +123,7 @@ describe("useTicketActions", () => {
       }),
       changeTicketStatus: vi.fn(),
       retriageTicket: vi.fn(),
+      submitReview: vi.fn(),
     };
 
     const initial = createTicket({ assignedTo: null });
@@ -154,6 +157,7 @@ describe("useTicketActions", () => {
       claimTicket: claimFn,
       changeTicketStatus: vi.fn(),
       retriageTicket: vi.fn(),
+      submitReview: vi.fn(),
     };
 
     const initial = createTicket({ assignedTo: null });
@@ -191,6 +195,7 @@ describe("useTicketActions", () => {
       claimTicket: claimFn,
       changeTicketStatus: statusFn,
       retriageTicket: vi.fn(),
+      submitReview: vi.fn(),
     };
 
     const initial = createTicket({ assignedTo: null });
@@ -224,6 +229,7 @@ describe("useTicketActions", () => {
         ticket: createTicket({ status: "in_progress", assignedTo: currentAgent }),
       }),
       retriageTicket: vi.fn(),
+      submitReview: vi.fn(),
     };
 
     const initial = createTicket({ status: "open", assignedTo: currentAgent });
@@ -251,6 +257,7 @@ describe("useTicketActions", () => {
         message: "Status update failed",
       }),
       retriageTicket: vi.fn(),
+      submitReview: vi.fn(),
     };
 
     const { result: failResult } = renderHook(() =>
@@ -286,6 +293,7 @@ describe("useTicketActions", () => {
           code: "unprocessable",
           message: "There isn't enough content to analyse.",
         }),
+      submitReview: vi.fn(),
     };
 
     const initial = createTicket();

@@ -44,9 +44,10 @@ npm run dev
 
 ## Temporary Mock Failure Rules (Manual Testing)
 
-During Phase 4, `lib/api/tickets-client.ts` uses deterministic mock failure rules with fixed 600 ms latency:
+During Phases 4 & 5, `lib/api/tickets-client.ts` uses deterministic mock failure rules with fixed 600 ms latency:
 - **Claim conflict (409)**: Triggered when the numeric portion of the ticket ID is divisible by 4 (e.g. `T-2008`, `T-2012`), returning winner `agent-2` (Rahul).
 - **Status network failure**: Triggered when the numeric portion of the ticket ID is divisible by 7 (e.g. `T-2002`).
+- **Review network failure**: Triggered when the numeric portion of the ticket ID is divisible by 6 (e.g. `T-2004`, `T-2010`, `T-2016`, `T-2022`). Fails on the first attempt with a simulated network error and succeeds on subsequent retries.
 These rules will be replaced by the fake API with chaos controls in Phase 8.
 
 ## Status
