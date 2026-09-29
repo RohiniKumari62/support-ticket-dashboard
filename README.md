@@ -34,11 +34,11 @@ npm run dev
 ## Folder Overview
 
 - `app/`: Next.js App Router pages and layouts (no `src/`)
-- `components/`: Reusable React components (`layout/`, `tickets/`, `review/`, `ui/`)
+- `components/`: Reusable React components (`layout/`, `components/tickets/`, `review/`, `ui/`)
 - `store/`: Redux Toolkit store and feature slices
-- `lib/`: API client wrappers and utilities
-- `data/`: Seed data and in-memory ticket store
-- `types/`: Shared TypeScript types and interfaces
+- `lib/`: API client wrappers, normalization and helpers (`lib/tickets/`), utilities
+- `data/`: Seed data, test tickets, and mock data (`data/`)
+- `types/`: Shared TypeScript types and interfaces (`types/ticket.ts`)
 - `validation/`: Plain TypeScript validators and business rules (no Zod)
 - `tests/`: Vitest test files
 

@@ -132,4 +132,25 @@ To be filled in.
 
 ## Where an AI Tool Was Wrong
 
-Prompt 1 assumed a src/ folder, but the project uses a root app/ folder. Noticed by comparing the file explorer with the plan before running it. Fixed with a path-mapping note in every prompt.
+Prompt 1 assumed a src/ folder, but the project uses a root app/ folder. Noticed by comparing the file explorer with the plan before running it. Fixed with a path-mapping note in every prompt.
+
+## Phase 2: Ticket List + Mock Data Decisions
+
+- **Where Data Lives**: Raw fixtures reside in `data/`, normalization in `lib/tickets/`, UI components in `components/tickets/`, and type contracts in `types/`. Raw data is intentionally kept raw and unmodified so edge cases and malicious inputs remain directly testable; the UI layer only ever receives normalized, safely typed tickets.
+- **Dataset Scale**: The assignment specifies generating ~5,000 tickets for stress testing, but Phase 2 introduces ~40 deterministic mock tickets combined with the 13 raw test tickets. The full high-scale generator and streaming architecture arrive with the fake API in Phase 8.
+- **Duplicate T-2001**: Deduplicated by `external_id`, keeping the first occurrence and dropping subsequent instances. The UI displays a small muted notice ("1 duplicate ticket ignored") so operators are informed without corrupting list keys or counts.
+- **Untrusted Customer Content**: Rendered strictly as plain text through React escaping. The brief contains a conflict between "show the body exactly as the customer wrote it, including any HTML formatting" and non-negotiable security requirements. Decision: display the raw HTML source text literally as escaped text without executing or rendering it as HTML (preserving "exactly as written" without stored XSS). This applies to subject, body, and AI summary (T-2002, T-2011).
+- **Unsafe Attachment URL (T-2003)**: Only `http:` and `https:` URLs are permitted; unsafe schemes like `javascript:`, `data:`, or `vbscript:` are dropped to `null` and flagged as `unsafe_attachment_url`. Prompt-injection payloads in ticket text are treated as inert strings and never influence priorities or system behavior.
+- **Invalid Field Values (T-2004, T-2009)**: Unknown plans ("platinum"), categories ("urgent_billing"), priorities ("P5"), and agents ("agent-99") are sanitized to `null` (or unknown agent tracking), labeled as "Unknown" in the UI, and flagged in `dataIssues`. They are never trusted; the Phase 8 API will reject them on mutations.
+- **Invalid Triage Decision (T-2012)**: Unrecognized triage decisions (such as "maybe") fail safe to `manual_review` and are flagged with `invalid_triage_decision`.
+- **Status Enum Conflict (T-2010)**: The brief specifies `open`, `in_progress`, and `resolved` for standard transitions, but T-2010 uses `closed` and live updates describe closing a ticket. Decision: `closed` is accepted as a valid terminal status with no further transitions.
+- **Timezone Normalization (T-2007, T-2009)**: Timestamps without timezone information (T-2007) are assumed to be UTC and flagged `assumed_utc`. Offset timestamps such as `+05:30` (T-2009) are converted to their exact UTC instant (`03:15:00Z`). All timestamps are formatted in fixed UTC on both SSR and client to prevent hydration mismatches; agent-local timezone conversions can be layered in later phases.
+- **Future Dates (T-2008)**: Future created dates are preserved and flagged with `future_created_at`, and sorted after normal chronological tickets so they do not artificially float to the top of the queue.
+- **Empty Subject and Body (T-2006)**: Empty subjects are displayed as a muted italic `(No subject)` rather than breaking layout or hiding the row.
+- **Long Unbroken Text and RTL Support (T-2005, T-2007)**: Long unbroken strings are truncated with full text preserved in `title` attributes and styled with `break-all`/overflow prevention. Customer text elements include `dir="auto"` to correctly support Arabic and other bidirectional scripts.
+- **Accessible Badges**: Priority and status badges use distinct text labels alongside restrained semantic tinting so meaning is never communicated through color alone.
+- **Single Scrollable List**: Displays all tickets on one scrollable page without pagination, consistent with intern assignment requirements. Virtualization is deferred to Phase 11 when testing with 5,000 tickets.
+- **Static Deadlines in Phase 2**: Deadlines are calculated and displayed as fixed dates; countdown tickers and dynamic late/at-risk/on-track styling are slated for Phase 7.
+- **Loading and Error States**: Local mock data is synchronous, so async loading and error UI states are deferred to Phase 8 when HTTP client fetching is implemented; an empty state component is provided for empty queues.
+- **Enterprise Minimum Priority Rule**: The rule requiring Enterprise tickets to be at least P1 is not enforced destructively in the raw data layer; it will be validated and enforced by the API in Phase 8 and the review form in Phase 5.
+

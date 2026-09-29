@@ -1,10 +1,20 @@
 import type { Metadata } from "next";
+import { RAW_TICKETS } from "@/data/mock-tickets";
+import { normalizeTickets } from "@/lib/tickets/normalize";
+import { sortTickets } from "@/lib/tickets/sort";
+import { TicketList } from "@/components/tickets/TicketList";
 
 export const metadata: Metadata = {
   title: "Tickets",
 };
 
 export default function TicketsPage() {
+  const { tickets, duplicatesRemoved } = normalizeTickets(
+    RAW_TICKETS,
+    new Date()
+  );
+  const sortedTickets = sortTickets(tickets);
+
   return (
     <div className="space-y-4">
       <div>
@@ -16,10 +26,10 @@ export default function TicketsPage() {
         </p>
       </div>
 
-      {/* TODO(phase-2): Implement ticket list table, search, filters, and pagination */}
-      <div className="rounded-[6px] border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        Ticket list arrives in Phase 2.
-      </div>
+      <TicketList
+        tickets={sortedTickets}
+        duplicatesRemoved={duplicatesRemoved}
+      />
     </div>
   );
 }
