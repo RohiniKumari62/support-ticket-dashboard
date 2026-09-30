@@ -152,6 +152,9 @@ class MockTicketsApiClient implements TicketsApiClient {
       triageDecision: "manual_review" as const,
       reviewReason: null,
       dataIssues: [],
+      humanReview: null,
+      version: 1,
+      updatedAt: new Date().toISOString(),
     };
 
     return {
@@ -218,6 +221,9 @@ class MockTicketsApiClient implements TicketsApiClient {
       triageDecision: "manual_review" as const,
       reviewReason: null,
       dataIssues: [],
+      humanReview: null,
+      version: 1,
+      updatedAt: new Date().toISOString(),
     };
 
     return {

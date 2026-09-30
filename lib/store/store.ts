@@ -5,6 +5,7 @@ import {
 import ticketsReducer from "./tickets-slice";
 import agentReducer from "./agent-slice";
 import filtersReducer from "./filters-slice";
+import liveReducer from "./live-slice";
 import { ticketsApiClient, type TicketsApiClient } from "@/lib/api/tickets-client";
 
 export interface ThunkExtra {
@@ -15,6 +16,7 @@ const rootReducer = combineReducers({
   tickets: ticketsReducer,
   agent: agentReducer,
   filters: filtersReducer,
+  live: liveReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

@@ -31,21 +31,21 @@ export const EMPTY_FILTERS: TicketFilters = {
 
 // ─── Allowed value sets (for safe parsing) ────────────────────────────────────
 
-const VALID_STATUSES = new Set<TicketStatus>([
+export const VALID_STATUSES = new Set<TicketStatus>([
   "open",
   "in_progress",
   "resolved",
   "closed",
 ]);
-const VALID_PRIORITIES = new Set<Priority>(["P0", "P1", "P2", "P3"]);
-const VALID_CATEGORIES = new Set<Category>([
+export const VALID_PRIORITIES = new Set<Priority>(["P0", "P1", "P2", "P3"]);
+export const VALID_CATEGORIES = new Set<Category>([
   "billing",
   "bug",
   "account_access",
   "feature_request",
   "other",
 ]);
-const VALID_DECISIONS = new Set<TriageDecision>([
+export const VALID_DECISIONS = new Set<TriageDecision>([
   "auto_accept",
   "manual_review",
 ]);
@@ -124,49 +124,57 @@ export function parseTicketFilters(
 // ─── Filter ───────────────────────────────────────────────────────────────────
 
 /**
- * Filters a list of normalized tickets by the given filters (AND-combined).
+ * Returns true if a single ticket satisfies all active filter conditions.
  * - Search is case-insensitive substring on subject OR body (body may be null)
  * - Tickets with null normalized value are excluded when that filter is active
+ */
+export function ticketMatchesFilters(
+  ticket: Ticket,
+  filters: TicketFilters
+): boolean {
+  const { q, status, priority, category, decision } = filters;
+  const normalizedQ = q ? q.toLowerCase() : "";
+
+  // Search filter — subject and body only
+  if (normalizedQ) {
+    const inSubject = ticket.subject.toLowerCase().includes(normalizedQ);
+    const inBody =
+      ticket.body != null && ticket.body.toLowerCase().includes(normalizedQ);
+    if (!inSubject && !inBody) return false;
+  }
+
+  // Status filter
+  if (status !== null) {
+    if (ticket.status !== status) return false;
+  }
+
+  // Priority filter
+  if (priority !== null) {
+    if (ticket.priority !== priority) return false;
+  }
+
+  // Category filter
+  if (category !== null) {
+    if (ticket.category !== category) return false;
+  }
+
+  // AI decision filter (uses normalized triageDecision)
+  if (decision !== null) {
+    if (ticket.triageDecision !== decision) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Filters a list of normalized tickets by the given filters (AND-combined).
  * - Preserves incoming order
  */
 export function filterTickets(
   tickets: Ticket[],
   filters: TicketFilters
 ): Ticket[] {
-  const { q, status, priority, category, decision } = filters;
-  const normalizedQ = q.toLowerCase();
-
-  return tickets.filter((ticket) => {
-    // Search filter — subject and body only
-    if (normalizedQ) {
-      const inSubject = ticket.subject.toLowerCase().includes(normalizedQ);
-      const inBody =
-        ticket.body != null && ticket.body.toLowerCase().includes(normalizedQ);
-      if (!inSubject && !inBody) return false;
-    }
-
-    // Status filter
-    if (status !== null) {
-      if (ticket.status !== status) return false;
-    }
-
-    // Priority filter
-    if (priority !== null) {
-      if (ticket.priority !== priority) return false;
-    }
-
-    // Category filter
-    if (category !== null) {
-      if (ticket.category !== category) return false;
-    }
-
-    // AI decision filter (uses normalized triageDecision)
-    if (decision !== null) {
-      if (ticket.triageDecision !== decision) return false;
-    }
-
-    return true;
-  });
+  return tickets.filter((ticket) => ticketMatchesFilters(ticket, filters));
 }
 
 // ─── Serialize ────────────────────────────────────────────────────────────────

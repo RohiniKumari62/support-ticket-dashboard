@@ -15,41 +15,50 @@ function isNormalDateTicket(ticket: Ticket): boolean {
 }
 
 /**
+ * Canonical ticket comparator:
+ * 1. Normal dates (not null/invalid/future) come before abnormal dates
+ * 2. Newest createdAt first
+ * 3. Tie-breaker by ticket ID
+ */
+export function compareTickets(a: Ticket, b: Ticket): number {
+  const aNormal = isNormalDateTicket(a);
+  const bNormal = isNormalDateTicket(b);
+
+  // Normal tickets come before abnormal (future / invalid / null) tickets
+  if (aNormal && !bNormal) return -1;
+  if (!aNormal && bNormal) return 1;
+
+  // Both are normal
+  if (aNormal && bNormal && a.createdAt && b.createdAt) {
+    const aTime = new Date(a.createdAt).getTime();
+    const bTime = new Date(b.createdAt).getTime();
+    if (bTime !== aTime) {
+      return bTime - aTime; // Newest first
+    }
+    return a.id.localeCompare(b.id);
+  }
+
+  // Both are abnormal
+  if (a.createdAt && b.createdAt) {
+    const aTime = new Date(a.createdAt).getTime();
+    const bTime = new Date(b.createdAt).getTime();
+    if (bTime !== aTime) {
+      return bTime - aTime;
+    }
+    return a.id.localeCompare(b.id);
+  }
+
+  if (a.createdAt && !b.createdAt) return -1;
+  if (!a.createdAt && b.createdAt) return 1;
+
+  return a.id.localeCompare(b.id);
+}
+
+/**
  * Sorts tickets with newest first by createdAt.
  * Tickets with future dates or null/invalid dates are sorted AFTER normal tickets.
  */
 export function sortTickets(tickets: Ticket[]): Ticket[] {
-  return [...tickets].sort((a, b) => {
-    const aNormal = isNormalDateTicket(a);
-    const bNormal = isNormalDateTicket(b);
-
-    // Normal tickets come before abnormal (future / invalid / null) tickets
-    if (aNormal && !bNormal) return -1;
-    if (!aNormal && bNormal) return 1;
-
-    // Both are normal
-    if (aNormal && bNormal && a.createdAt && b.createdAt) {
-      const aTime = new Date(a.createdAt).getTime();
-      const bTime = new Date(b.createdAt).getTime();
-      if (bTime !== aTime) {
-        return bTime - aTime; // Newest first
-      }
-      return a.id.localeCompare(b.id);
-    }
-
-    // Both are abnormal
-    if (a.createdAt && b.createdAt) {
-      const aTime = new Date(a.createdAt).getTime();
-      const bTime = new Date(b.createdAt).getTime();
-      if (bTime !== aTime) {
-        return bTime - aTime;
-      }
-      return a.id.localeCompare(b.id);
-    }
-
-    if (a.createdAt && !b.createdAt) return -1;
-    if (!a.createdAt && b.createdAt) return 1;
-
-    return a.id.localeCompare(b.id);
-  });
+  return [...tickets].sort(compareTickets);
 }
+

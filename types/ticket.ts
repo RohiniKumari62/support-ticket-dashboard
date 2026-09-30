@@ -76,4 +76,6 @@ export interface Ticket {
   reviewReason: string | null;
   dataIssues: TicketDataIssue[];
   humanReview?: HumanReview | null;
+  version: number;
+  updatedAt: string;
 }

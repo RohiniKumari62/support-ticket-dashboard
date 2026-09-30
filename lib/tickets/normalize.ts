@@ -198,6 +198,8 @@ export function normalizeTicket(raw: RawTicket, now: Date): Ticket {
       typeof raw.review_reason === "string" ? raw.review_reason : null,
     dataIssues: issues,
     humanReview: null,
+    version: 1,
+    updatedAt: now.toISOString(),
   };
 }
 

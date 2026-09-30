@@ -36,6 +36,9 @@ function makeSampleTicket(id: string, overrides: Partial<Ticket> = {}): Ticket {
     triageDecision: "auto_accept",
     reviewReason: null,
     dataIssues: [],
+    humanReview: null,
+    version: 1,
+    updatedAt: "2026-09-20T10:00:00.000Z",
     ...overrides,
   };
 }

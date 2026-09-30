@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { StoreProvider } from "@/components/providers/StoreProvider";
-import { getNormalizedTicketsData } from "@/lib/tickets/data";
+import { getTicketStore } from "@/lib/server/get-store";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -24,7 +24,17 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { tickets, duplicatesRemoved } = getNormalizedTicketsData();
+  // Seed initial tickets from the shared server store so SSR data
+  // and the API share the same in-memory state.
+  const store = getTicketStore();
+  const listResult = store.list({ limit: 200 });
+  const tickets = listResult.ok ? listResult.tickets : [];
+  const duplicatesRemoved = listResult.ok ? listResult.duplicatesRemoved : 0;
+  // Use server time as the live-update cursor starting point
+  const initialServerTime = listResult.ok
+    ? listResult.serverTime
+    : new Date().toISOString();
+  const initialInstanceId = listResult.ok ? listResult.instanceId : "";
 
   return (
     <html lang="en" className={`${inter.variable} h-full`}>
@@ -32,6 +42,8 @@ export default function RootLayout({
         <StoreProvider
           initialTickets={tickets}
           duplicatesRemoved={duplicatesRemoved}
+          initialServerTime={initialServerTime}
+          initialInstanceId={initialInstanceId}
         >
           <a href="#main" className="skip-link">
             Skip to main content

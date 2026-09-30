@@ -82,3 +82,13 @@ export const selectReviewCount = createSelector(
   [selectReviewQueue],
   (queue): number => queue.length
 );
+
+// ─── Live update selectors ────────────────────────────────────────────────────
+export const selectLiveState = (state: RootState) => state.live;
+export const selectPendingNewIds = (state: RootState) =>
+  state.live.pendingNewIds;
+export const selectPendingNewCount = (state: RootState) =>
+  state.live.pendingNewIds.length;
+export const selectLiveStatus = (state: RootState) => state.live.status;
+export const selectLiveCursor = (state: RootState) => state.live.cursor;
+export const selectLiveInstanceId = (state: RootState) => state.live.instanceId;

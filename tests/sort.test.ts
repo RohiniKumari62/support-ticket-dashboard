@@ -25,6 +25,9 @@ function createMockTicket(
     triageDecision: "auto_accept",
     reviewReason: null,
     dataIssues: issues,
+    humanReview: null,
+    version: 1,
+    updatedAt: createdAt ?? "2026-09-20T09:00:00.000Z",
   };
 }
 

@@ -27,6 +27,9 @@ function createTicket(overrides: Partial<Ticket> = {}): Ticket {
     triageDecision: "auto_accept",
     reviewReason: null,
     dataIssues: [],
+    humanReview: null,
+    version: 1,
+    updatedAt: "2026-09-20T09:15:00Z",
     ...overrides,
   };
 }
