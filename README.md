@@ -2,6 +2,10 @@
 
 Internal support-agent dashboard for triaging, reviewing, claiming, and updating customer tickets.
 
+## Live Demo
+
+**[https://support-ticket-dashboard-phi.vercel.app/](https://support-ticket-dashboard-phi.vercel.app/)**
+
 ## Requirements
 
 - Node.js >= 20.0.0
