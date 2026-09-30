@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getTicketById } from "@/lib/tickets/data";
+import { getTicketStore } from "@/lib/server/get-store";
 import { TicketDetail } from "@/components/tickets/detail/TicketDetail";
 
 export const metadata: Metadata = {
@@ -28,10 +28,11 @@ export default async function TicketDetailPage({
     notFound();
   }
 
-  const ticket = getTicketById(decodedId);
-  if (!ticket) {
+  const store = getTicketStore();
+  const result = store.get(decodedId);
+  if (!result.ok) {
     notFound();
   }
 
-  return <TicketDetail ticketId={decodedId} ticket={ticket} />;
+  return <TicketDetail ticketId={decodedId} ticket={result.ticket} />;
 }
