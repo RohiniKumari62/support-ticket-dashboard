@@ -29,7 +29,13 @@ function isPlainObject(val: unknown): val is Record<string, unknown> {
 }
 
 export function parseTicketId(rawId: string): ValidationResult<string> {
-  if (typeof rawId !== "string" || !ID_REGEX.test(rawId)) {
+  if (
+    typeof rawId !== "string" ||
+    !ID_REGEX.test(rawId) ||
+    rawId === "__proto__" ||
+    rawId === "constructor" ||
+    rawId === "prototype"
+  ) {
     return {
       ok: false,
       details: { id: "Ticket ID must match ^[A-Za-z0-9_-]{1,64}$." },
@@ -115,7 +121,12 @@ export function parseListQuery(url: URL): ValidationResult<ListQuery> {
   const cursorParam = url.searchParams.get("cursor");
   let cursor: string | null = null;
   if (cursorParam !== null && cursorParam !== "") {
-    if (!ID_REGEX.test(cursorParam)) {
+    if (
+      !ID_REGEX.test(cursorParam) ||
+      cursorParam === "__proto__" ||
+      cursorParam === "constructor" ||
+      cursorParam === "prototype"
+    ) {
       details.cursor = "Cursor must match ^[A-Za-z0-9_-]{1,64}$.";
     } else {
       cursor = cursorParam;

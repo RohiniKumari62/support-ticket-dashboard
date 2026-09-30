@@ -5,6 +5,7 @@
 import type { Ticket, TicketStatus } from "@/types/ticket";
 import type { ApiErrorCode, ApiResult, TicketsApiClient } from "./tickets-client";
 import type { ReviewDecision } from "@/lib/tickets/review";
+import { parseTicket } from "./parse-ticket";
 
 type ApiErrorResult = Extract<ApiResult<Ticket>, { ok: false }>;
 
@@ -46,14 +47,17 @@ async function parseErrorResponse(
       message = String(err.message ?? message);
     }
     if (body?.ticket) {
-      ticket = body.ticket as Ticket;
-      // A conflict on claim carries the winner's assignedTo
-      if (
-        code === "conflict" &&
-        ticket?.assignedTo &&
-        typeof ticket.assignedTo === "string"
-      ) {
-        assignedTo = ticket.assignedTo;
+      const parsed = parseTicket(body.ticket);
+      if (parsed) {
+        ticket = parsed;
+        // A conflict on claim carries the winner's assignedTo
+        if (
+          code === "conflict" &&
+          ticket.assignedTo &&
+          typeof ticket.assignedTo === "string"
+        ) {
+          assignedTo = ticket.assignedTo;
+        }
       }
     }
   } catch {
@@ -89,7 +93,15 @@ class HttpTicketsApiClient implements TicketsApiClient {
 
     try {
       const body = await res.json();
-      return { ok: true, ticket: body.ticket as Ticket };
+      const parsed = parseTicket(body?.ticket);
+      if (!parsed) {
+        return {
+          ok: false,
+          code: "network",
+          message: "Unexpected response from server: invalid ticket data.",
+        };
+      }
+      return { ok: true, ticket: parsed };
     } catch {
       return {
         ok: false,
@@ -104,8 +116,6 @@ class HttpTicketsApiClient implements TicketsApiClient {
     status: TicketStatus,
     _currentTicket?: Ticket
   ): Promise<ApiResult<Ticket>> {
-    // The status route requires agentId; we pass the current ticket's assignedTo
-    // or fall back to an empty string which the server will reject with a clear error.
     const agentId = _currentTicket?.assignedTo ?? "";
 
     let res: Response;
@@ -129,7 +139,15 @@ class HttpTicketsApiClient implements TicketsApiClient {
 
     try {
       const body = await res.json();
-      return { ok: true, ticket: body.ticket as Ticket };
+      const parsed = parseTicket(body?.ticket);
+      if (!parsed) {
+        return {
+          ok: false,
+          code: "network",
+          message: "Unexpected response from server: invalid ticket data.",
+        };
+      }
+      return { ok: true, ticket: parsed };
     } catch {
       return {
         ok: false,
@@ -145,8 +163,6 @@ class HttpTicketsApiClient implements TicketsApiClient {
   ): Promise<ApiResult<Ticket>> {
     let res: Response;
     try {
-      // The retriage endpoint reads the ticket from the server store by ID.
-      // We send the agentId so the server can gate the call if needed.
       res = await fetch(
         `/api/tickets/${encodeURIComponent(ticketId)}/retriage`,
         {
@@ -177,7 +193,15 @@ class HttpTicketsApiClient implements TicketsApiClient {
 
     try {
       const body = await res.json();
-      return { ok: true, ticket: body.ticket as Ticket };
+      const parsed = parseTicket(body?.ticket);
+      if (!parsed) {
+        return {
+          ok: false,
+          code: "network",
+          message: "Unexpected response from server: invalid ticket data.",
+        };
+      }
+      return { ok: true, ticket: parsed };
     } catch {
       return {
         ok: false,
@@ -227,7 +251,15 @@ class HttpTicketsApiClient implements TicketsApiClient {
 
     try {
       const resBody = await res.json();
-      return { ok: true, ticket: resBody.ticket as Ticket };
+      const parsed = parseTicket(resBody?.ticket);
+      if (!parsed) {
+        return {
+          ok: false,
+          code: "network",
+          message: "Unexpected response from server: invalid ticket data.",
+        };
+      }
+      return { ok: true, ticket: parsed };
     } catch {
       return {
         ok: false,

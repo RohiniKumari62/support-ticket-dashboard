@@ -267,6 +267,17 @@ export class TicketStore {
       };
     }
 
+    // Already assigned to an unknown agent
+    if (ticket.assignedToUnknown) {
+      return {
+        ok: false,
+        status: 409,
+        code: "conflict",
+        message: "Ticket is already assigned to an unknown agent.",
+        ticket,
+      };
+    }
+
     // If forced claim conflict: assign to a different agent and bump version
     if (options.forceConflict) {
       const otherAgents = ["agent-1", "agent-2", "agent-3"].filter(

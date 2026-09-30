@@ -21,6 +21,7 @@ export type TriageDecision = "auto_accept" | "manual_review";
 export type TicketDataIssue =
   | "empty_subject"
   | "empty_body"
+  | "invalid_output"
   | "invalid_plan"
   | "invalid_category"
   | "invalid_priority"

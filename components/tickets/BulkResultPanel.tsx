@@ -93,8 +93,8 @@ export function BulkResultPanel({
                 </span>
                 <span
                   dir="auto"
-                  className="text-slate-900 truncate font-normal"
-                  title={r.subject}
+                  className="text-slate-900 truncate font-normal [unicode-bidi:plaintext]"
+                  title={(r.subject || "(No subject)").slice(0, 200)}
                 >
                   {r.subject || "(No subject)"}
                 </span>

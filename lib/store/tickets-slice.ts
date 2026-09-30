@@ -54,8 +54,13 @@ export const ticketsSlice = createSlice({
       const byId: Record<string, Ticket> = {};
       const ids: string[] = [];
       for (const t of tickets) {
+        if (!t?.id || t.id === "__proto__" || t.id === "constructor" || t.id === "prototype") {
+          continue;
+        }
+        if (!byId[t.id]) {
+          ids.push(t.id);
+        }
         byId[t.id] = t;
-        ids.push(t.id);
       }
       state.byId = byId;
       state.ids = ids;
@@ -64,6 +69,9 @@ export const ticketsSlice = createSlice({
     ticketReceivedFromServer(state, action: PayloadAction<Ticket>) {
       const incoming = action.payload;
       const id = incoming.id;
+      if (!id || id === "__proto__" || id === "constructor" || id === "prototype") {
+        return;
+      }
       const inFlight = state.inFlight[id];
 
       if (inFlight) {

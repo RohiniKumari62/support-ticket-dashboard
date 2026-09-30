@@ -52,6 +52,7 @@ export const liveSlice = createSlice({
         const existing = new Set(state.pendingNewIds);
         for (const id of newIds) {
           if (!existing.has(id)) {
+            existing.add(id);
             state.pendingNewIds.push(id);
           }
         }

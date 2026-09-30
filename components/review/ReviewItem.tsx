@@ -117,7 +117,8 @@ export function ReviewItem({
             ref={subjectLinkRef}
             href={`/tickets/${encodeURIComponent(ticket.id)}`}
             dir="auto"
-            className="block font-medium text-sm sm:text-base text-slate-900 hover:text-blue-600 hover:underline break-words line-clamp-2 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
+            title={(ticket.subject || "(No subject)").slice(0, 200)}
+            className="block font-medium text-sm sm:text-base text-slate-900 hover:text-blue-600 hover:underline break-words line-clamp-2 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2 [unicode-bidi:plaintext]"
           >
             {ticket.subject ? (
               ticket.subject
@@ -186,7 +187,10 @@ export function ReviewItem({
 
           <div className="md:col-span-2 pt-1 border-t border-slate-200/60">
             <dt className="text-xs text-slate-500 font-medium">AI Summary</dt>
-            <dd className="text-slate-800 text-xs sm:text-sm mt-0.5 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+            <dd
+              dir="auto"
+              className="text-slate-800 text-xs sm:text-sm mt-0.5 whitespace-pre-wrap break-words [overflow-wrap:anywhere] [unicode-bidi:plaintext]"
+            >
               {ticket.summary ? (
                 ticket.summary
               ) : (

@@ -55,9 +55,9 @@ export const TicketListItem = React.memo(function TicketListItem({
           <div className="flex items-start justify-between gap-2 min-w-0">
             <Link
               href={`/tickets/${encodeURIComponent(ticket.id)}`}
-              className="font-medium text-sm text-slate-900 hover:text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 min-h-[40px] flex items-center line-clamp-2 break-all"
+              className="font-medium text-sm text-slate-900 hover:text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 min-h-[40px] flex items-center line-clamp-2 break-all [unicode-bidi:plaintext]"
               dir="auto"
-              title={ticket.subject || "(No subject)"}
+              title={(ticket.subject || "(No subject)").slice(0, 200)}
             >
               {ticket.subject ? (
                 ticket.subject

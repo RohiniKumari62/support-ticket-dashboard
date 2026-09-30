@@ -98,7 +98,7 @@ export function TicketDetail({
           <div className="space-y-1 min-w-0 flex-1">
             <h1
               dir="auto"
-              className="text-xl sm:text-2xl font-semibold text-slate-900 break-words"
+              className="text-xl sm:text-2xl font-semibold text-slate-900 break-words [unicode-bidi:plaintext]"
             >
               {hasSubject ? (
                 ticket.subject

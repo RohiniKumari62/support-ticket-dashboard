@@ -241,4 +241,95 @@ Prompt 1 assumed a src/ folder, but the project uses a root app/ folder. Noticed
   - Newly arrived tickets buffer quietly into `live.pendingNewIds`, triggering the non-intrusive new tickets banner.
   - Active ticket view (`/tickets/[id]`) detects foreign claims and raises the concurrency alert banner immediately.
 
+## Phase 10: Security, Edge Cases & Test Tickets
+
+### Trust Model
+
+Customer-submitted ticket content (subject, body, summary) is treated as **untrusted user input** at all rendering and processing boundaries:
+
+- **Rendering**: All ticket text is rendered as plain text via React's default JSX escaping. No `dangerouslySetInnerHTML` is used anywhere in the application. Unicode bidirectional override characters are neutralised with `unicode-bidi: plaintext` CSS on all text containers.
+- **URLs**: Attachment URLs are validated by `lib/safe-url.ts` at normalisation time (server-side) and by the client before rendering as anchor tags. Only `http:`/`https:` schemes are allowed; credentials, protocol-relative `//`, and control characters are rejected. Maximum URL length is capped at 2,048 characters.
+- **Server secret isolation**: `TRIAGE_API_KEY` is read only inside Route Handlers and `lib/server/` code; it is never imported from `lib/api/` or any client bundle. A source scan test (`tests/sourceSecurityScan.test.ts`) statically verifies no `TRIAGE_API_KEY` string appears in client-facing source files.
+
+### Content Security Policy (next.config.ts)
+
+Applied on `/:path*` (every route):
+
+| Directive | Value (production) |
+|---|---|
+| `default-src` | `'self'` |
+| `script-src` | `'self' 'unsafe-inline'` (+ `'unsafe-eval'` in dev for HMR) |
+| `style-src` | `'self' 'unsafe-inline'` |
+| `img-src` | `'self' data:` |
+| `font-src` | `'self' data:` |
+| `connect-src` | `'self'` (+ `ws: wss:` in dev for HMR) |
+| `object-src` | `'none'` |
+| `base-uri` | `'self'` |
+| `form-action` | `'self'` |
+| `frame-ancestors` | `'none'` |
+| `upgrade-insecure-requests` | (production only) |
+
+Additional headers: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera, microphone, geolocation, payment, usb all denied).
+
+`'unsafe-inline'` in `script-src` is required by Next.js's built-in inline chunk strategy.
+
+### Server-Side Input Guards
+
+- **Prototype pollution prevention**: `parseTicketId` and `parseListQuery` in `lib/server/validation.ts` reject `__proto__`, `constructor`, and `prototype`. The Redux `tickets-slice.ts` applies the same guard before writing to `byId`.
+- **Empty-ticket retriage guard** (retriage route): Returns 422 `unprocessable` when both `subject` and `body` are blank, without calling the triage service.
+- **Human-reviewed overwrite guard** (retriage route): Returns 409 `already_reviewed` when `ticket.humanReview !== null`, preventing AI from overwriting a human decision.
+- **Unknown-assignee claim guard** (ticket store): Returns 409 `conflict` when `ticket.assignedToUnknown` is set.
+
+### Client-Side API Runtime Guard (lib/api/parse-ticket.ts)
+
+Every ticket entering Redux state from the HTTP layer is validated by `parseTicket`:
+
+- `id`: must match `/^[A-Za-z0-9_-]{1,64}$/`; prototype-pollution keys rejected.
+- `version`: positive integer only.
+- Enum fields (`status`, `priority`, `plan`, `category`, `triageDecision`): allowlist-only.
+- String lengths: `body ≤ 20,000`, `subject ≤ 2,000`, `summary ≤ 2,000` characters.
+- ISO 8601 date fields validated with `Date.parse`.
+- `humanReview.action`: wire values `"accept"` and `"change"` are normalised to `"accepted"` and `"changed"`.
+- Invalid items are dropped with a counter and never enter Redux state.
+
+### Test Ticket Handling Table (T-2001 to T-2012)
+
+| ID | Scenario | Expected Behaviour |
+|---|---|---|
+| T-2001 (×2) | Duplicate external ID in seed | Deduplicated; one entry in store; `duplicatesRemoved = 1` |
+| T-2002 | XSS in subject/body | Rendered as plain text; no `<img onerror=…>` element in DOM |
+| T-2003 | Prompt injection + `javascript:` attachment URL | Priority stays P3; attachment URL rejected as unsafe |
+| T-2004 | Invalid plan + priority + category | Normalised with multiple `dataIssues`; rendered safely |
+| T-2005 | Very long subject (underscores) | Truncated in table; full text in detail view |
+| T-2006 | Empty subject + null body | 422 `unprocessable` on retriage; flagged `manual_review` |
+| T-2007 | Arabic + emoji subject; no-timezone date; enterprise | Date flagged `assumed_utc`; enterprise floor raises AI P3 → P1 |
+| T-2008 | Future `created_at` (2027) | Flagged `future_created_at`; processed normally otherwise |
+| T-2009 | Unknown `assigned_to` | Flagged `invalid_agent`; claim returns 409 |
+| T-2010 | Closed status | 409 `invalid_transition` on retriage |
+| T-2011 | Human-reviewed ticket | 409 `already_reviewed` on retriage |
+| T-2012 | Missing `created_at` (null) | Flagged `invalid_created_at`; deadline cell shows "—" |
+
+### Test Suite Coverage (Phase 10)
+
+10 new test files, 72 new tests added:
+
+| File | Focus |
+|---|---|
+| `tests/safeUrlHarden.test.ts` | URL allowlist edge cases |
+| `tests/parseTicketGuard.test.ts` | Client runtime ticket validation |
+| `tests/auditMatrix.test.ts` | Per-ticket normalisation outcomes (T-2001 – T-2012) |
+| `tests/xssRendering.test.tsx` | DOM confirms no `<img onerror>` is constructed |
+| `tests/apiValidationMatrix.test.ts` | Route-level input validation |
+| `tests/retriageSecurity.test.ts` | Retriage guards (triage service mocked for determinism) |
+| `tests/duplicateSafety.test.ts` | Deduplication at seed, pagination, Redux, live polling |
+| `tests/liveEdgeCases.test.ts` | Header counts for edge-case tickets |
+| `tests/securityHeaders.test.ts` | CSP in prod vs dev via `vi.stubEnv` |
+| `tests/sourceSecurityScan.test.ts` | Static scan: `TRIAGE_API_KEY` absent from client files |
+
+### Intentional Omissions
+
+- **No DOMPurify**: React renders all content as text nodes by default; no HTML rendering intended.
+- **No nonce-based CSP**: Requires Next.js middleware plumbing; deferred.
+- **No real authentication**: Agent switcher is a UI simulation; auth is Phase 11 scope.
+- **`'unsafe-inline'` in script-src**: Required by Next.js's inline hydration chunks.
 

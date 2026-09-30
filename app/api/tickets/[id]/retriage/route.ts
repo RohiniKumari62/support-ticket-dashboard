@@ -60,12 +60,24 @@ export async function POST(
       );
     }
 
-    // Tickets already reviewed/changed by a human cannot have their decisions overwritten
-    if (ticket.humanReview?.action === "changed") {
+    // Tickets already reviewed by a human cannot have their decisions overwritten
+    if (ticket.humanReview !== null) {
       return apiError(
         "already_reviewed",
         "This ticket was already reviewed by an agent. AI cannot overwrite human decisions.",
         409,
+        { ticket }
+      );
+    }
+
+    // Empty tickets cannot be retriaged
+    const hasSubject = typeof ticket.subject === "string" && ticket.subject.trim().length > 0;
+    const hasBody = typeof ticket.body === "string" && ticket.body.trim().length > 0;
+    if (!hasSubject && !hasBody) {
+      return apiError(
+        "unprocessable",
+        "There isn't enough content to analyse.",
+        422,
         { ticket }
       );
     }

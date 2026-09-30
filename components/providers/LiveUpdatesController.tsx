@@ -13,6 +13,7 @@ import {
 } from "@/lib/store/live-slice";
 import { ticketReceivedFromServer } from "@/lib/store/tickets-slice";
 import type { Ticket } from "@/types/ticket";
+import { parseTicketsArray } from "@/lib/api/parse-ticket";
 
 /** How often to poll for updates (ms). */
 const POLL_INTERVAL_MS = 10_000;
@@ -88,26 +89,46 @@ export function LiveUpdatesController({
           throw new Error(`HTTP ${res.status}`);
         }
 
-        const data: UpdatesResponse = await res.json();
+        const rawData = await res.json();
+        if (
+          !rawData ||
+          typeof rawData !== "object" ||
+          !Array.isArray(rawData.created) ||
+          !Array.isArray(rawData.updated) ||
+          typeof rawData.serverTime !== "string" ||
+          typeof rawData.instanceId !== "string"
+        ) {
+          throw new Error("Malformed updates response");
+        }
+
+        const data = rawData as UpdatesResponse;
 
         if (cancelled) return;
 
         // Detect server restart — store was reset
         if (data.instanceId !== instanceIdRef.current) {
-          // Reset — page will reflect re-seeded data on next user action.
-          // We still advance the cursor to avoid replaying all history.
           instanceIdRef.current = data.instanceId;
         }
 
+        // Validate tickets through client API runtime guard
+        const validUpdated = parseTicketsArray(data.updated).valid;
+        const validCreated = parseTicketsArray(data.created).valid;
+
         // Dispatch updated tickets immediately
-        for (const t of data.updated) {
+        for (const t of validUpdated) {
           dispatch(ticketReceivedFromServer(t));
         }
 
-        // Collect IDs of new tickets for the banner
-        const newIds = data.created.map((t) => t.id);
-        // Also merge them into the store so clicking "Show" can resolve them
-        for (const t of data.created) {
+        // Collect unique IDs of new tickets for the banner (deduplicating)
+        const updatedIds = new Set(validUpdated.map((t) => t.id));
+        const seenNewIds = new Set<string>();
+        const newIds: string[] = [];
+
+        for (const t of validCreated) {
+          if (!updatedIds.has(t.id) && !seenNewIds.has(t.id)) {
+            seenNewIds.add(t.id);
+            newIds.push(t.id);
+          }
           dispatch(ticketReceivedFromServer(t));
         }
 

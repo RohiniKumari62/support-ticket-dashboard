@@ -63,9 +63,9 @@ const TicketTableRow = React.memo(function TicketTableRow({
         <div className="flex items-center gap-1.5 min-w-0">
           <Link
             href={`/tickets/${encodeURIComponent(ticket.id)}`}
-            className="font-medium text-slate-900 hover:text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 truncate"
+            className="font-medium text-slate-900 hover:text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 truncate [unicode-bidi:plaintext]"
             dir="auto"
-            title={ticket.subject || "(No subject)"}
+            title={(ticket.subject || "(No subject)").slice(0, 200)}
           >
             {ticket.subject ? (
               ticket.subject

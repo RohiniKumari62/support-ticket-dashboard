@@ -11,7 +11,7 @@ export function TicketBody({ body }: TicketBodyProps) {
       {hasContent ? (
         <div
           dir="auto"
-          className="text-sm text-slate-800 whitespace-pre-wrap break-words [overflow-wrap:anywhere] max-w-full font-sans"
+          className="text-sm text-slate-800 whitespace-pre-wrap break-words [overflow-wrap:anywhere] [unicode-bidi:plaintext] max-w-full font-sans"
         >
           {body}
         </div>
