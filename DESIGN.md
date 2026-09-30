@@ -133,8 +133,12 @@ Use ONLY for meaning. Subtle tinted text + background — no saturated fills.
 ### Interactivity
 
 - Visible focus ring on every interactive element (blue-600, 2px)
-- Touch targets: minimum 40px height on mobile
-- Density: table rows ~44px on desktop
+- Touch targets: minimum 44px height on mobile (`min-h-[44px]`)
+- Density: table rows ~44px on desktop with subtle `hover:bg-muted/40` and `focus-within:bg-muted/40`
+- Links: subject links interact via color shift (`hover:text-primary`) without underline; focus ring preserved
+- Filter dropdowns: native `<select>` with visible label, chevron affordance, input-like borders
+- Active filters: compact removable chips row derived from URL state with "Clear all"
+- SLA indicators: compact semantic status pills ("Late", "At risk", "On track") with `tabular-nums` countdowns
 
 ### Layout
 

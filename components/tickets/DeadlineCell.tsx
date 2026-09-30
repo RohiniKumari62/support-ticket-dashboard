@@ -15,18 +15,27 @@ export interface DeadlineCellProps {
 }
 
 function getStatusBadge(state: DeadlineState) {
+  const pillBase =
+    "inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium leading-none";
+
   switch (state) {
     case "late":
       return (
-        <span className="font-medium text-red-700">Late</span>
+        <span className={`${pillBase} bg-red-50 text-red-700 border border-red-200`}>
+          Late
+        </span>
       );
     case "at_risk":
       return (
-        <span className="font-medium text-amber-700">At risk</span>
+        <span className={`${pillBase} bg-amber-50 text-amber-800 border border-amber-200`}>
+          At risk
+        </span>
       );
     case "on_track":
       return (
-        <span className="font-medium text-slate-700">On track</span>
+        <span className={`${pillBase} bg-green-50 text-green-800 border border-green-200`}>
+          On track
+        </span>
       );
     case "future_date":
       return (
@@ -70,11 +79,11 @@ export function DeadlineCell({
 
   return (
     <div className="flex flex-col text-xs tabular">
-      {/* State label + Countdown */}
+      {/* State pill + Countdown */}
       <div className="flex items-center gap-1.5 flex-wrap">
         {getStatusBadge(info.state)}
         {countdown && (
-          <span className="font-mono text-slate-600 font-normal">
+          <span className="inline-block tabular-nums font-mono text-slate-600 font-normal min-w-[4.5rem]">
             {countdown}
           </span>
         )}

@@ -72,7 +72,7 @@ export function TicketDetail({
         <div>
           <Link
             href="/tickets"
-            className="text-sm text-blue-600 hover:underline inline-flex items-center"
+            className="inline-flex items-center min-h-[40px] px-3 rounded-[6px] text-sm font-medium bg-sky-500 text-white hover:bg-sky-600 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 select-none"
           >
             ← Back to tickets
           </Link>
@@ -89,7 +89,7 @@ export function TicketDetail({
       <div className="space-y-3">
         <Link
           href={backHref}
-          className="inline-flex items-center min-h-[40px] text-sm text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="inline-flex items-center min-h-[40px] px-3 rounded-[6px] text-sm font-medium bg-sky-500 text-white hover:bg-sky-600 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 select-none"
         >
           ← Back to tickets
         </Link>

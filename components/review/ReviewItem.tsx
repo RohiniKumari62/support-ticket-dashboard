@@ -118,7 +118,7 @@ export function ReviewItem({
             href={`/tickets/${encodeURIComponent(ticket.id)}`}
             dir="auto"
             title={(ticket.subject || "(No subject)").slice(0, 200)}
-            className="block font-medium text-sm sm:text-base text-slate-900 hover:text-blue-600 hover:underline break-words line-clamp-2 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2 [unicode-bidi:plaintext]"
+            className="block font-medium text-sm sm:text-base text-slate-900 hover:text-blue-600 transition-colors motion-reduce:transition-none break-words line-clamp-2 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2 [unicode-bidi:plaintext]"
           >
             {ticket.subject ? (
               ticket.subject
@@ -221,7 +221,7 @@ export function ReviewItem({
             type="button"
             onClick={() => onAccept(ticket.id)}
             disabled={!acceptable || saving}
-            className="w-full sm:w-auto min-h-[44px] px-4 py-2 rounded-[6px] bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2 transition-colors cursor-pointer"
+            className="w-full sm:w-auto min-h-[44px] px-4 py-2 rounded-[6px] bg-sky-500 text-white text-sm font-medium hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 transition-colors cursor-pointer"
           >
             Accept AI answer
           </button>
@@ -245,7 +245,7 @@ export function ReviewItem({
           aria-controls={`change-form-${ticket.id}`}
           onClick={() => setIsChangeManuallyToggled(!isChangeOpen)}
           disabled={saving}
-          className="w-full sm:w-auto min-h-[44px] px-4 py-2 rounded-[6px] border border-slate-300 bg-white text-slate-700 text-sm font-medium hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2 transition-colors cursor-pointer"
+          className="w-full sm:w-auto min-h-[44px] px-4 py-2 rounded-[6px] border border-sky-200 bg-sky-50 text-sky-800 text-sm font-medium hover:bg-sky-100 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 transition-colors cursor-pointer"
         >
           {isChangeOpen ? "Close change form" : "Change…"}
         </button>

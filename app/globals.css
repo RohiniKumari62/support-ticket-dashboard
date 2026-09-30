@@ -179,12 +179,12 @@
     outline-offset: 2px;
   }
 
-  a {
+  a,
+  a:hover,
+  a:focus,
+  a:active {
     color: var(--primary);
-  }
-
-  a:hover {
-    text-decoration: underline;
+    text-decoration: none !important;
   }
 
   /* Accessible motion preference */

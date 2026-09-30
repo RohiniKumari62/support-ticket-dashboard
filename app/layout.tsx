@@ -23,6 +23,14 @@ export const metadata: Metadata = {
     default: "Support Desk",
   },
   description: "Internal support-agent ticket management dashboard.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

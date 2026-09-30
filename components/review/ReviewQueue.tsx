@@ -161,7 +161,7 @@ export function ReviewQueue({
           <div className="pt-2">
             <Link
               href="/tickets"
-              className="inline-flex items-center justify-center min-h-[40px] px-4 rounded-[6px] bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
+              className="inline-flex items-center justify-center min-h-[40px] px-4 rounded-[6px] bg-sky-500 text-white text-sm font-medium hover:bg-sky-600 transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2"
             >
               Back to tickets
             </Link>

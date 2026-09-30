@@ -41,8 +41,10 @@ const TicketTableRow = React.memo(function TicketTableRow({
 
   return (
     <tr
-      className={`hover:bg-slate-50/80 transition-colors h-[44px] ${
-        isSelected ? "bg-blue-50/40" : ""
+      className={`h-[44px] transition-colors motion-reduce:transition-none ${
+        isSelected
+          ? "bg-blue-50/70 hover:bg-blue-100/50 focus-within:bg-blue-100/50"
+          : "hover:bg-muted/40 focus-within:bg-muted/40"
       } [content-visibility:auto] [contain-intrinsic-size:auto_44px]`}
     >
       {/* Selection checkbox */}
@@ -63,7 +65,7 @@ const TicketTableRow = React.memo(function TicketTableRow({
         <div className="flex items-center gap-1.5 min-w-0">
           <Link
             href={`/tickets/${encodeURIComponent(ticket.id)}`}
-            className="font-medium text-slate-900 hover:text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 truncate [unicode-bidi:plaintext]"
+            className="font-medium text-slate-900 hover:text-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors motion-reduce:transition-none truncate [unicode-bidi:plaintext]"
             dir="auto"
             title={(ticket.subject || "(No subject)").slice(0, 200)}
           >

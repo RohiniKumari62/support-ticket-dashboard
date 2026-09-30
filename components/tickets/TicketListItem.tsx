@@ -32,8 +32,10 @@ export const TicketListItem = React.memo(function TicketListItem({
 
   return (
     <li
-      className={`py-3 px-3 hover:bg-slate-50/80 transition-colors ${
-        isSelected ? "bg-blue-50/40" : ""
+      className={`py-3 px-3 transition-colors motion-reduce:transition-none ${
+        isSelected
+          ? "bg-blue-50/70 hover:bg-blue-100/50 focus-within:bg-blue-100/50"
+          : "hover:bg-muted/40 focus-within:bg-muted/40"
       } [content-visibility:auto] [contain-intrinsic-size:auto_72px]`}
     >
       <div className="flex items-start gap-3">
@@ -55,7 +57,7 @@ export const TicketListItem = React.memo(function TicketListItem({
           <div className="flex items-start justify-between gap-2 min-w-0">
             <Link
               href={`/tickets/${encodeURIComponent(ticket.id)}`}
-              className="font-medium text-sm text-slate-900 hover:text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 min-h-[40px] flex items-center line-clamp-2 break-all [unicode-bidi:plaintext]"
+              className="font-medium text-sm text-slate-900 hover:text-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors motion-reduce:transition-none min-h-[40px] flex items-center line-clamp-2 break-all [unicode-bidi:plaintext]"
               dir="auto"
               title={(ticket.subject || "(No subject)").slice(0, 200)}
             >

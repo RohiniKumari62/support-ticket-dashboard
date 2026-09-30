@@ -50,8 +50,11 @@ describe("AppHeader", () => {
     mockUsePathname.mockReturnValue("/tickets");
   });
 
-  it("renders the brand name", () => {
+  it("renders the brand logo and name linking to /tickets", () => {
     renderHeader();
+    const brandLink = screen.getByRole("link", { name: "Support Desk" });
+    expect(brandLink).toBeInTheDocument();
+    expect(brandLink).toHaveAttribute("href", "/tickets");
     expect(screen.getByText("Support Desk")).toBeInTheDocument();
   });
 

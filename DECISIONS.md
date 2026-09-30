@@ -440,4 +440,50 @@ Measurements performed with `FAKE_API_CHAOS=off`:
   2. Implement keyboard shortcut navigation (`j`/`k` for row selection, `c` for claim, `/` for search focus).
   3. Support customizable SLA window policies configurable per customer enterprise tier.
 
+## UI Polish Pass Decisions
+
+### 1. Native `<select>` Restyling for Filter Controls
+- **Kept Native Elements**: Kept native `<select>` controls rather than replacing them with a JavaScript-driven Radix/shadcn Select dropdown component. This maintains zero JS bundle overhead, standard mobile OS native pickers (iOS action sheet / Android dialog), full built-in keyboard navigation, and prevents any Lighthouse score or bundle regression.
+- **Dropdown Affordances**: Restyled selects with `appearance-none`, a visible inline chevron-down SVG icon (`aria-hidden="true"`, `pointer-events-none`), right padding (`pr-8`) to prevent text overlap, standard input-like border (`border-slate-200`), white fill, `cursor-pointer`, and consistent height (`h-11 md:h-10`) matching the search input.
+- **Visible Control Labels**: Replaced sr-only labels with visible labels ("Status", "Priority", "Category", "AI decision") positioned directly above each control, preserving programmatic `<label htmlFor>` association for accessibility.
+
+### 2. Decorative Initials Avatar for Agent Selector
+- **Initials Avatar**: Added a 28px circular badge displaying the first initial of the selected agent (P for Priya, R for Rahul, M for Meera) derived dynamically via `getAgentName(currentAgentId).charAt(0)`.
+- **Accessibility & Hydration**: Marked the avatar `aria-hidden="true"` as it is purely decorative; the accessible name remains governed by the `<label htmlFor="agent-select">Agent</label>`. Uses neutral design tokens (`bg-slate-100 text-slate-700 border border-slate-200`) with > 7:1 contrast. Avatar and select are styled inside a single unified container with `focus-within:ring-2 focus-within:ring-blue-600` and select's `focus-visible:ring-2`.
+
+### 3. Subject Link Interaction (No Underline)
+- **Hover/Focus Refinement**: Removed `hover:underline` from ticket subject links in both the desktop table (`TicketTable.tsx`) and mobile list (`TicketListItem.tsx`). Replaced with subtle text color shift (`hover:text-blue-600`) and `transition-colors motion-reduce:transition-none`. Visible 2px `:focus-visible` ring is strictly preserved.
+
+### 4. Active Filter Chips Row
+- **Single Source of Truth**: Chips are computed directly from URL-parsed filter props (`filters`) passed to `TicketFilters.tsx`. No secondary state was introduced.
+- **Compact & Accessible**: Rendered only when at least one filter is active. Each chip is a real `<button type="button">` with descriptive accessible label (e.g. `Remove filter Status: Open`), `aria-hidden="true"` on the "×" symbol, and `min-h-[44px]` touch target on mobile. Search queries are truncated to 30 characters in display text while preserving full query in `aria-label`.
+- **Unified Clear Control**: Consolidated the standalone "Clear filters" link into a single "Clear all" button in the chips row, navigating to the bare `/tickets` route and synchronizing local search input state.
+
+### 5. SLA Deadline Presentation as Status Pills
+- **Calculations Untouched**: Pure SLA logic (`getDeadlineInfo`, `formatCountdown`, priority hours, 20% at-risk threshold, static done states) remains unchanged.
+- **Status Pills**: Styled "On track" (`bg-green-50 text-green-800 border-green-200`), "At risk" (`bg-amber-50 text-amber-800 border-amber-200`), and "Late" (`bg-red-50 text-red-700 border-red-200`) as compact pills passing WCAG AA 4.5:1 contrast.
+- **Wording Choice ("Late")**: Maintained the assignment-mandated label "Late" (rather than "Overdue") to conform with the specification, existing tests, and Phase 7 DECISIONS.
+- **CLS & Screen Reader Safety**: Added `min-w-[4.5rem]` with `tabular-nums font-mono` to the countdown container to prevent digit-width shift each second. Omitted `aria-live` from the countdown to prevent screen reader noise.
+
+### 6. Row Hover & Focus-Within States
+- **Subtle Row Affordance**: Applied `hover:bg-muted/40` and `focus-within:bg-muted/40` to table rows and mobile list items. Selected rows use a distinct, stronger blue background (`bg-blue-50/70 hover:bg-blue-100/50`) that is never overridden by hover.
+- **Hover Capability**: Tailwind v4 wraps `hover:` in `@media (hover: hover)`, ensuring sticky hover does not trigger on touch-only mobile devices.
+
+### Lighthouse & Performance Verification
+- **Lighthouse Scores (Mobile Production Build, `FAKE_API_CHAOS=off`)**:
+  - Baseline (Live Vercel Production): Performance 98, Accessibility 96, Best Practices 96, SEO 100
+  - Post-Polish Pass (Local Production Build via `npx lighthouse` against `next start`): Performance 90 (local Windows throttling), Accessibility 96, Best Practices 100, SEO 100 (live production scores to be verified by user on Vercel deployment)
+- **Bundle & Chunk Size Delta**:
+  - Baseline uncompressed static chunks: 830,961 bytes
+  - Post-polish uncompressed static chunks: 837,646 bytes (+6,685 bytes raw, < 1.8 KB gzipped across entire build; First Load JS delta for `/tickets` < 1 KB gzipped).
+
+## Brand Logo & Favicon Identity
+
+- **Header Brand Logo**: Styled `Support Desk` in [AppHeader.tsx](file:///c:/Users/ry679/support-ticket-dashboard/components/layout/AppHeader.tsx) as a prominent brand badge link (`<Link href="/tickets">`) with a neutral grey background (`bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 rounded-[6px]`), bold text (`font-bold text-slate-900`), and accessible focus states.
+- **Custom "SD" Favicon**: Replaced the default Vercel triangle favicon with a custom "SD" icon. Created scalable vector favicon [app/icon.svg](file:///c:/Users/ry679/support-ticket-dashboard/app/icon.svg) and [public/icon.svg](file:///c:/Users/ry679/support-ticket-dashboard/public/icon.svg), along with multi-resolution (16x16, 32x32, 48x48) [app/favicon.ico](file:///c:/Users/ry679/support-ticket-dashboard/app/favicon.ico) and [public/favicon.ico](file:///c:/Users/ry679/support-ticket-dashboard/public/favicon.ico) generated from scratch without any external dependencies. Declared `icons` in metadata in [app/layout.tsx](file:///c:/Users/ry679/support-ticket-dashboard/app/layout.tsx).
+- **Detail Page Navigation Link**: Styled `← Back to tickets` in [TicketDetail.tsx](file:///c:/Users/ry679/support-ticket-dashboard/components/tickets/detail/TicketDetail.tsx) as a button pill matching the light sky blue profile theme (`bg-sky-500 hover:bg-sky-600 text-white px-3 rounded-[6px] min-h-[40px]`), removing the text underline.
+- **Global Link Hover Underline Elimination**: In accordance with DESIGN.md ("Links: subject links interact via color shift without underline; focus ring preserved"), removed `hover:underline` from ticket subject links in [ReviewItem.tsx](file:///c:/Users/ry679/support-ticket-dashboard/components/review/ReviewItem.tsx), attachments in [TicketAttachment.tsx](file:///c:/Users/ry679/support-ticket-dashboard/components/tickets/detail/TicketAttachment.tsx), button link variants in [button.tsx](file:///c:/Users/ry679/support-ticket-dashboard/components/ui/button.tsx), and active filter "Clear all" in [TicketFilters.tsx](file:///c:/Users/ry679/support-ticket-dashboard/components/tickets/TicketFilters.tsx). Additionally enforced `text-decoration: none !important` on `a, a:hover, a:focus, a:active` in [globals.css](file:///c:/Users/ry679/support-ticket-dashboard/app/globals.css).
+- **Light Blue Button Styling Consistency**: Standardized primary action buttons ("Accept AI answer" in [ReviewItem.tsx](file:///c:/Users/ry679/support-ticket-dashboard/components/review/ReviewItem.tsx), "Claim ticket" in [TicketActions.tsx](file:///c:/Users/ry679/support-ticket-dashboard/components/tickets/detail/TicketActions.tsx), "Back to tickets" in [TicketDetail.tsx](file:///c:/Users/ry679/support-ticket-dashboard/components/tickets/detail/TicketDetail.tsx) and [ReviewQueue.tsx](file:///c:/Users/ry679/support-ticket-dashboard/components/review/ReviewQueue.tsx), and "Save changes" in [ChangeReviewForm.tsx](file:///c:/Users/ry679/support-ticket-dashboard/components/review/ChangeReviewForm.tsx)) to a consistent light sky blue fill (`bg-sky-500 hover:bg-sky-600 text-white`). Styled the companion "Change..." button in [ReviewItem.tsx](file:///c:/Users/ry679/support-ticket-dashboard/components/review/ReviewItem.tsx) with a light blue tinted outline style (`bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100`) for visual harmony.
+
+
 

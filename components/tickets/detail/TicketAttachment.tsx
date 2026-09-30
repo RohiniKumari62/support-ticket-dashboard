@@ -26,7 +26,7 @@ export function TicketAttachment({
             href={safeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-blue-600 hover:underline break-all focus-visible:outline-2 focus-visible:outline-offset-2"
+            className="text-sm text-blue-600 hover:text-blue-700 transition-colors motion-reduce:transition-none break-all focus-visible:outline-2 focus-visible:outline-offset-2"
           >
             {safeUrl}
             <span className="sr-only"> (opens in a new tab)</span>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { NavLinks } from "./NavLinks";
 import { AgentSelect } from "./AgentSelect";
 import { HeaderCounts } from "./HeaderCounts";
@@ -18,9 +19,13 @@ export function AppHeader() {
          */}
         <div className="flex flex-wrap items-center justify-between min-h-[48px] py-1 gap-y-1 sm:gap-y-0">
           {/* Brand — order 1 on mobile & desktop */}
-          <span className="order-1 text-sm font-semibold text-[oklch(0.129_0.014_254.6)] whitespace-nowrap select-none">
+          <Link
+            href="/tickets"
+            className="order-1 inline-flex items-center h-9 px-3 rounded-[6px] bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 text-sm font-bold text-slate-900 tracking-tight transition-colors select-none focus-visible:outline-2 focus-visible:outline-offset-2"
+            aria-label="Support Desk"
+          >
             Support Desk
-          </span>
+          </Link>
 
           {/* AgentSelect — order 2 on mobile (top right), order 4 on desktop (far right) */}
           <div className="order-2 sm:order-4">

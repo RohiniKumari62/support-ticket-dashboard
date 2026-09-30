@@ -52,7 +52,7 @@ export function TicketActions({
               type="button"
               onClick={onClaim}
               disabled={isPending}
-              className="w-full min-h-[44px] px-4 py-2 rounded-[6px] bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2 transition-colors cursor-pointer"
+              className="w-full min-h-[44px] px-4 py-2 rounded-[6px] bg-sky-500 text-white text-sm font-medium hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-sky-500 focus-visible:outline-offset-2 transition-colors cursor-pointer"
             >
               {pendingAction === "claim" ? "Claiming…" : "Claim ticket"}
             </button>
