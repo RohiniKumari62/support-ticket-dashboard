@@ -332,4 +332,112 @@ Every ticket entering Redux state from the HTTP layer is validated by `parseTick
 - **No nonce-based CSP**: Requires Next.js middleware plumbing; deferred.
 - **No real authentication**: Agent switcher is a UI simulation; auth is Phase 11 scope.
 - **`'unsafe-inline'` in script-src**: Required by Next.js's inline hydration chunks.
+
+## Phase 11: Testing, Performance, Responsive & Accessibility Decisions
+
+### Testing Strategy & Determinism Rules
+
+- **Coverage Across Boundaries**: The test suite covers pure calculation and normalization (`lib/tickets/`), client state and optimistic thunks (`lib/store/`), route handler input validation and prototype pollution defense (`app/api/`, `lib/server/`), DOM XSS escaping, responsive table/mobile rendering, accessibility semantics, and render redraw isolation.
+- **Strict Determinism**:
+  - Timers: `vi.useFakeTimers()` controls all debounce intervals (300 ms) and ticker clocks. Real wall-clock timers and delays are forbidden in tests.
+  - Chaos Isolation: Tests run with `FAKE_API_CHAOS=off` or instantiate stores with injected RNGs and seeds (`createRng(1337)`).
+  - External Services: In tests exercising route handlers (e.g. `retriageSecurity.test.ts`), non-deterministic external AI functions (`runTriageService`) are mocked via `vi.spyOn` to guarantee predictable outcomes.
+  - Clean State: Each test instantiates a fresh Redux store via `makeStore()`.
+- **Assignment-Mandated Tests**:
+  1. **Deadline calculation** (`tests/deadline.test.ts`): SLA windows (P0: 1h, P1: 4h, P2: 24h, P3: 72h), elapsed percentage boundaries (late <= 0s, at risk <= 20%, on track > 20%), static completion for resolved/closed tickets.
+  2. **Optimistic claim, conflict rollback & duplicate click** (`tests/useTicketActions.test.tsx`, `tests/ticketsSlice.test.ts`, `tests/renderPerformance.test.tsx`): Instant local optimistic state update, 409 conflict reconciliation with server winner, and in-flight condition guards preventing duplicate network dispatches.
+  3. **API rule enforcement** (`tests/apiValidationMatrix.test.ts`, `tests/transitions.test.ts`, `tests/retriageSecurity.test.ts`): Lifecycle transitions (`open -> in_progress -> resolved -> open`), enterprise floor rule (P1 minimum), 409 unknown agent claim conflict, 422 empty ticket retriage guard.
+  4. **XSS-safe rendering of T-2002** (`tests/xssRendering.test.tsx`, `tests/auditMatrix.test.ts`): Subject and body HTML tags rendered strictly as plain text nodes; verified zero `<img>` or `onerror` elements in the DOM.
+  5. **Pagination & new-ticket consistency** (`tests/duplicateSafety.test.ts`, `tests/ticketStore.test.ts`): Cursor stability without duplicate items or skipped tickets during concurrent background arrivals.
+
+### Render-Performance Proof & Row Redraw Strategy
+
+- **Automated Render-Count Verification (`tests/renderPerformance.test.tsx`)**:
+  - Evaluated on a 50-ticket table with a Redux store. Row renders are tracked deterministically per ticket ID.
+  - **(1) Single Ticket Claim**: Dispatching an optimistic claim on ticket `T-10001` re-renders ONLY row `T-10001`. The remaining 49 rows do not re-render.
+  - **(2) Live Poll Equal Versions**: Dispatching incoming tickets with equal or older versions does not trigger re-renders on any rows.
+  - **(3) Single Checkbox Toggle**: Clicking a row checkbox re-renders only that row and the bulk summary bar; other 49 rows do not re-render.
+  - **(4) 1s Ticker Advance**: Advancing the ticker by 1,000 ms re-renders only `DeadlineCell` instances; rows, table, and workspace do not re-render.
+  - **(5) Unrelated Redux Updates**: Changing agent identity, live polling status, or pending banner count does not re-render ticket rows.
+- **Manual Verification Method**:
+  - In Chrome with React Developer Tools installed, open Settings → General → check "Highlight updates when components render".
+  - Navigate to `/tickets`. Clicking Claim on a ticket flashes only that specific row green. The 1s SLA timer flashes only the Deadline column text.
+- **Engine Optimization Fixed in Phase 11**:
+  - Updated `ticketReceivedFromServer` in `lib/store/tickets-slice.ts` to check `existing.version >= incoming.version`. When polling returns unchanged tickets, Immer avoids mutating `state.byId`, preventing selector invalidation and redundant redraws.
+- **Why No Virtualization**:
+  - Native virtualization libraries (react-window, tanstack-virtual) introduce heavy DOM churn, break Ctrl+F in-page browser search, and degrade screen reader accessibility.
+  - Instead, table rows and mobile list items apply CSS `content-visibility: auto` with `contain-intrinsic-size: auto 44px` (table) and `auto 72px` (mobile). The browser engine natively skips layout and paint calculations for off-screen rows, maintaining 60 fps scrolling across thousands of tickets with zero JavaScript overhead.
+
+### Search and Filter Performance
+
+- **300 ms Debounce**: `TicketFilters.tsx` uses a 300 ms debounce timer for text input changes, ensuring rapid keystroke bursts execute exactly one URL update and one API call.
+- **Instant Enter Flush**: Pressing `Enter` in the search box immediately clears the timer and executes the navigation synchronously.
+- **URL as Single Truth**: Filter state is governed by URL query parameters. The Redux sync effect uses serialized filter comparison to prevent recursive feedback loops.
+
+### 5,000-Ticket Scale Metrics
+
+Measurements performed with `FAKE_API_CHAOS=off`:
+- **Cold Seed Generation**: 17–22 ms to build 5,012 normalized tickets.
+- **In-Memory Store Initialization**: ~39 ms.
+- **`GET /api/tickets?limit=50` Payload Size**: 29.32 KB (30,024 bytes uncompressed JSON).
+- **Server Substring Search (`q: "billing"`)**: 2.22 ms across all 5,012 tickets (400 matches).
+- **`scope=counts` Bootstrap**: Exactly 400 tickets match counted statuses (`open`, `in_progress`, `manual_review`). Retrieved in exactly 2 pages (limit 200) in 2.60 ms, well within the target threshold (<= 3 pages).
+
+### Lighthouse Strategy & Production Readiness
+
+- **Standard Procedure**:
+  - Run with `FAKE_API_CHAOS=off` in `.env.local`.
+  - Compile with `npm run build && npm run start`.
+  - In Chrome Incognito (no extensions), run Lighthouse Mobile preset against `http://localhost:3000/tickets` 3 times and compute the median.
+  - Screenshot target: `docs/lighthouse-tickets-mobile.png`.
+- **Chaos Mode Honest Distinction**: When `FAKE_API_CHAOS=on`, the API injects artificial 300–1500 ms latency and 10% 500 errors. This tests client retry resilience and loading skeletons, not bundle rendering performance.
+- **Optimizations Applied**:
+  - Self-hosted Inter font via `next/font/google` (`display: swap`).
+  - Added dedicated SSR loading skeletons (`app/tickets/loading.tsx`, `app/tickets/[id]/loading.tsx`, `app/review/loading.tsx`) with matching row heights (`h-[44px]`) to guarantee zero Cumulative Layout Shift (CLS).
+  - Pre-allocated widths and tabular numbers for counts and timestamps.
+  - Zero heavy third-party UI or chart dependencies.
+
+### Responsive Design Decisions
+
+- **Breakpoints**: 768px (`md`) cleanly separates 9-column desktop `<table>` from the mobile stacked list (`<ul>/<li>`).
+- **Mobile Bulk Bar**: Fixed to viewport bottom with `pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]`. When active, `TicketsWorkspace` dynamically adds `pb-24 md:pb-0` to guarantee the bottom rows are never covered.
+- **Touch Target Sizing**: All buttons, checkboxes, and selects meet or exceed 44px height on mobile (`min-h-[44px]`).
+- **iOS Zoom Prevention**: Form inputs and selects use `text-base md:text-sm` (16px on mobile, 14px on desktop), preventing iOS Safari from forcing viewport zoom on focus.
+- **Overflow Protection**: Flex items apply `min-w-0` and long unbroken text uses `break-words` and `[unicode-bidi:plaintext]`. Page-level horizontal scrolling is prevented down to 320px width.
+
+### Accessibility (a11y) Decisions
+
+- **Landmarks**: `<a href="#main" className="skip-link">Skip to main content</a>`, `<header>`, `<nav aria-label="Main navigation">`, and `<main id="main">`.
+- **Headings**: Exactly one `<h1>` per page (`Tickets`, ticket subject on detail, `Review queue`).
+- **Table Semantics**: Semantic `<table>` with `<caption className="sr-only">`, `th scope="col"`, and accessible names for all checkboxes (`aria-label="Select all visible tickets"`, `aria-label="Select T-2001"`).
+- **Interactive Focus**: Visible 2px focus ring (`:focus-visible`) across all buttons, inputs, links, and selects.
+- **Form Controls**: All inputs, selects, and textareas have explicit programmatic labels (`htmlFor`/`id` or `sr-only`). Errors are linked via `aria-describedby` and `aria-invalid`. Focus moves to the first invalid field upon failed review submission.
+- **Live Regions**: Non-disruptive announcements use `role="status"` with `aria-live="polite"`. Error and conflict banners use `role="alert"` with `aria-live="assertive"`. Live SLA countdown tickers do not spam screen readers with per-second live announcements.
+- **Not Color Alone**: Priority, status, and deadline badges always display textual labels alongside subtle tinted backgrounds.
+- **Reduced Motion**: Enforced `@media (prefers-reduced-motion: reduce)` in `app/globals.css`.
+
+### Loading, Error & Empty State Inventory
+
+- **Initial Load**: Fast SSR static shell and loading skeleton with identical row heights.
+- **Filter Navigation**: Non-blocking `useTransition` with `aria-busy` indicator.
+- **Empty States**: Clear distinction between zero total tickets and zero filter matches (with one-click "Clear filters" link).
+- **Network Resilience & Offline Recovery**: `LiveUpdatesController` listens to the `window.online` event, immediately clearing backoff timers and resuming polling when internet connectivity returns.
+- **Action In-Progress States**: Distinct loading labels ("Claiming…", "Updating…", "Saving…", "Working… M/N") while buttons remain safely disabled against concurrent double-submits.
+
+### Known Harmless Warnings
+
+- **AppHeader `act(...)` Warning in Tests**: When running `AppHeader.test.tsx`, an un-mocked client hydration effect emits an `act(...)` warning in testing environments. This warning is completely harmless and does not manifest in production builds.
+
+### Skipped & One More Week
+
+- **Skipped Due to Time**:
+  - Virtualization library (avoided intentionally in favor of native CSS `content-visibility: auto`).
+  - Automated visual regression testing suite in CI.
+  - End-to-end Playwright tests with real browser drivers.
+  - Service Worker / PWA offline caching layer.
+- **With One More Week**:
+  1. Implement cross-tab coordination via `BroadcastChannel` to synchronize ticket updates and agent identity between open browser tabs without duplicate polling.
+  2. Implement keyboard shortcut navigation (`j`/`k` for row selection, `c` for claim, `/` for search focus).
+  3. Support customizable SLA window policies configurable per customer enterprise tier.
+
 

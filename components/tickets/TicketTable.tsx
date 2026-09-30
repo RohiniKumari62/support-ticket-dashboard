@@ -43,7 +43,7 @@ const TicketTableRow = React.memo(function TicketTableRow({
     <tr
       className={`hover:bg-slate-50/80 transition-colors h-[44px] ${
         isSelected ? "bg-blue-50/40" : ""
-      }`}
+      } [content-visibility:auto] [contain-intrinsic-size:auto_44px]`}
     >
       {/* Selection checkbox */}
       <td className="py-2 px-3 w-10 text-center">

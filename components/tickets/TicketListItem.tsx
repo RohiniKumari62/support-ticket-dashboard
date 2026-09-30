@@ -34,7 +34,7 @@ export const TicketListItem = React.memo(function TicketListItem({
     <li
       className={`py-3 px-3 hover:bg-slate-50/80 transition-colors ${
         isSelected ? "bg-blue-50/40" : ""
-      }`}
+      } [content-visibility:auto] [contain-intrinsic-size:auto_72px]`}
     >
       <div className="flex items-start gap-3">
         {/* Mobile Checkbox (touch target >= 44px) */}

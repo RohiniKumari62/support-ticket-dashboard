@@ -127,7 +127,7 @@ export function ChangeReviewForm({
             disabled={saving}
             aria-invalid={Boolean(errors.category)}
             aria-describedby={errors.category ? `category-err-${ticket.id}` : undefined}
-            className="w-full h-10 px-3 rounded-[6px] border border-slate-300 bg-white text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
+            className="w-full h-10 px-3 rounded-[6px] border border-slate-300 bg-white text-base sm:text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
           >
             {(!ticket.category || category === "") && (
               <option value="">Select category…</option>
@@ -164,7 +164,7 @@ export function ChangeReviewForm({
             disabled={saving}
             aria-invalid={Boolean(errors.priority)}
             aria-describedby={errors.priority ? `priority-err-${ticket.id}` : undefined}
-            className="w-full h-10 px-3 rounded-[6px] border border-slate-300 bg-white text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
+            className="w-full h-10 px-3 rounded-[6px] border border-slate-300 bg-white text-base sm:text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
           >
             {(!ticket.priority || priority === "") && (
               <option value="">Select priority…</option>
@@ -222,7 +222,7 @@ export function ChangeReviewForm({
           aria-invalid={Boolean(errors.reason)}
           aria-describedby={errors.reason ? `reason-err-${ticket.id}` : undefined}
           placeholder="Explain why category or priority was changed…"
-          className="w-full p-2.5 rounded-[6px] border border-slate-300 bg-white text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
+          className="w-full p-2.5 rounded-[6px] border border-slate-300 bg-white text-base sm:text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
         />
         {errors.reason && (
           <p

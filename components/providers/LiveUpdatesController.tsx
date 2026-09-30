@@ -158,11 +158,18 @@ export function LiveUpdatesController({
       }
     }
 
-    // Start first poll after a short delay so the page renders first
-    timeoutId = setTimeout(poll, 2000);
+    function handleOnline() {
+      if (cancelled) return;
+      failCountRef.current = 0;
+      if (timeoutId !== null) clearTimeout(timeoutId);
+      poll();
+    }
+
+    window.addEventListener("online", handleOnline);
 
     return () => {
       cancelled = true;
+      window.removeEventListener("online", handleOnline);
       if (timeoutId !== null) clearTimeout(timeoutId);
       if (abortRef.current) abortRef.current.abort();
       dispatch(liveReset());

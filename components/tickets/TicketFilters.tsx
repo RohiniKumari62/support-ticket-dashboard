@@ -117,11 +117,11 @@ export function TicketFilters({
   // ─── Styles ──────────────────────────────────────────────────────────────
 
   const inputBase =
-    "h-10 w-full rounded bg-white border border-slate-200 px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-0 transition-colors";
+    "h-10 w-full rounded bg-white border border-slate-200 px-3 text-base md:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-0 transition-colors";
   const inputActive = "border-blue-500 bg-blue-50/30";
 
   const selectBase =
-    "h-10 w-full rounded bg-white border border-slate-200 px-2.5 text-sm text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-0 transition-colors appearance-none cursor-pointer";
+    "h-10 w-full rounded bg-white border border-slate-200 px-2.5 text-base md:text-sm text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-0 transition-colors appearance-none cursor-pointer";
   const selectActive = "border-blue-500 bg-blue-50/30 font-medium";
 
   const isFiltersActive = hasActiveFilters(filters);

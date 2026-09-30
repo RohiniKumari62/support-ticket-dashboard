@@ -75,9 +75,16 @@ export const ticketsSlice = createSlice({
       const inFlight = state.inFlight[id];
 
       if (inFlight) {
+        if (inFlight.snapshot && inFlight.snapshot.version > incoming.version) {
+          return;
+        }
         // Update the snapshot to newer server truth while preserving active optimistic view
         inFlight.snapshot = incoming;
       } else {
+        const existing = state.byId[id];
+        if (existing && existing.version >= incoming.version) {
+          return;
+        }
         state.byId[id] = incoming;
         if (!state.ids.includes(id)) {
           state.ids.push(id);

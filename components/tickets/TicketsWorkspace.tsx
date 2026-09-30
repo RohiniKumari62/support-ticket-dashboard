@@ -190,7 +190,11 @@ export function TicketsWorkspace({ filters }: TicketsWorkspaceProps) {
   }, [dispatch]);
 
   return (
-    <div className="space-y-4">
+    <div
+      className={`space-y-4 ${
+        effectiveSelectedIds.length > 0 ? "pb-24 md:pb-0" : ""
+      }`}
+    >
       <div>
         <h1 className="text-xl font-semibold text-slate-900 break-words">
           Tickets
