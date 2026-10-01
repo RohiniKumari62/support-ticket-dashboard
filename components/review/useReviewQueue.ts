@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Category, Priority, Ticket } from "@/types/ticket";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import {
@@ -43,41 +43,51 @@ export function useReviewQueue({
   const [drafts, setDrafts] = useState<Record<string, ChangeDraft>>({});
   const [itemErrors, setItemErrors] = useState<Record<string, string | null>>({});
   const [feedback, setFeedback] = useState<ReviewFeedback | null>(null);
+  const inFlightIdsRef = useRef<Set<string>>(new Set());
 
   const accept = useCallback(
     async (ticketId: string) => {
-      const action = await dispatch(
-        reviewTicketThunk({
-          ticketId,
-          decision: { type: "accept" },
-          reviewerId: currentAgentId,
-        })
-      );
+      if (inFlightIdsRef.current.has(ticketId)) {
+        return;
+      }
+      inFlightIdsRef.current.add(ticketId);
 
-      if (reviewTicketThunk.fulfilled.match(action)) {
-        setFeedback({
-          kind: "success",
-          text: formatReviewSuccessMessage(ticketId, "accept"),
-        });
-        setItemErrors((prev) => {
-          const next = { ...prev };
-          delete next[ticketId];
-          return next;
-        });
-      } else if (reviewTicketThunk.rejected.match(action)) {
-        if (action.meta.condition) {
-          return;
+      try {
+        const action = await dispatch(
+          reviewTicketThunk({
+            ticketId,
+            decision: { type: "accept" },
+            reviewerId: currentAgentId,
+          })
+        );
+
+        if (reviewTicketThunk.fulfilled.match(action)) {
+          setFeedback({
+            kind: "success",
+            text: formatReviewSuccessMessage(ticketId, "accept"),
+          });
+          setItemErrors((prev) => {
+            const next = { ...prev };
+            delete next[ticketId];
+            return next;
+          });
+        } else if (reviewTicketThunk.rejected.match(action)) {
+          if (action.meta.condition) {
+            return;
+          }
+          const payload = action.payload;
+          const msg = payload?.message || "Network error. The ticket is back in the queue.";
+          setItemErrors((prev) => ({
+            ...prev,
+            [ticketId]: payload?.message ?? "Network error",
+          }));
+          setFeedback({
+            kind: "error",
+            text: formatReviewErrorMessage(ticketId, msg),
+          });
         }
-        const payload = action.payload;
-        const msg = payload?.message || "Network error. The ticket is back in the queue.";
-        setItemErrors((prev) => ({
-          ...prev,
-          [ticketId]: payload?.message ?? "Network error",
-        }));
-        setFeedback({
-          kind: "error",
-          text: formatReviewErrorMessage(ticketId, msg),
-        });
+      } finally {
+        inFlightIdsRef.current.delete(ticketId);
       }
     },
     [currentAgentId, dispatch]
@@ -92,52 +102,61 @@ export function useReviewQueue({
         reason: string;
       }
     ) => {
-      const action = await dispatch(
-        reviewTicketThunk({
-          ticketId,
-          decision: {
-            type: "change",
-            category: input.category,
-            priority: input.priority,
-            reason: input.reason,
-          },
-          reviewerId: currentAgentId,
-        })
-      );
+      if (inFlightIdsRef.current.has(ticketId)) {
+        return;
+      }
+      inFlightIdsRef.current.add(ticketId);
 
-      if (reviewTicketThunk.fulfilled.match(action)) {
-        setFeedback({
-          kind: "success",
-          text: formatReviewSuccessMessage(ticketId, "change"),
-        });
-        setDrafts((prev) => {
-          const next = { ...prev };
-          delete next[ticketId];
-          return next;
-        });
-        setItemErrors((prev) => {
-          const next = { ...prev };
-          delete next[ticketId];
-          return next;
-        });
-      } else if (reviewTicketThunk.rejected.match(action)) {
-        if (action.meta.condition) {
-          return;
+      try {
+        const action = await dispatch(
+          reviewTicketThunk({
+            ticketId,
+            decision: {
+              type: "change",
+              category: input.category,
+              priority: input.priority,
+              reason: input.reason,
+            },
+            reviewerId: currentAgentId,
+          })
+        );
+
+        if (reviewTicketThunk.fulfilled.match(action)) {
+          setFeedback({
+            kind: "success",
+            text: formatReviewSuccessMessage(ticketId, "change"),
+          });
+          setDrafts((prev) => {
+            const next = { ...prev };
+            delete next[ticketId];
+            return next;
+          });
+          setItemErrors((prev) => {
+            const next = { ...prev };
+            delete next[ticketId];
+            return next;
+          });
+        } else if (reviewTicketThunk.rejected.match(action)) {
+          if (action.meta.condition) {
+            return;
+          }
+          const payload = action.payload;
+          const msg = payload?.message || "Network error. The ticket is back in the queue.";
+          setDrafts((prev) => ({
+            ...prev,
+            [ticketId]: input,
+          }));
+          setItemErrors((prev) => ({
+            ...prev,
+            [ticketId]: payload?.message ?? "Network error",
+          }));
+          setFeedback({
+            kind: "error",
+            text: formatReviewErrorMessage(ticketId, msg),
+          });
         }
-        const payload = action.payload;
-        const msg = payload?.message || "Network error. The ticket is back in the queue.";
-        setDrafts((prev) => ({
-          ...prev,
-          [ticketId]: input,
-        }));
-        setItemErrors((prev) => ({
-          ...prev,
-          [ticketId]: payload?.message ?? "Network error",
-        }));
-        setFeedback({
-          kind: "error",
-          text: formatReviewErrorMessage(ticketId, msg),
-        });
+      } finally {
+        inFlightIdsRef.current.delete(ticketId);
       }
     },
     [currentAgentId, dispatch]

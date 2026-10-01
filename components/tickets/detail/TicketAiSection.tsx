@@ -16,7 +16,9 @@ export function TicketAiSection({ ticket }: TicketAiSectionProps) {
 
   let priorityDifferenceReason = "";
   if (isPriorityDifferent) {
-    if (ticket.reviewReason === "rule_adjusted" && ticket.plan === "enterprise") {
+    if (ticket.humanReview?.note) {
+      priorityDifferenceReason = `Reason for change: ${ticket.humanReview.note}`;
+    } else if (ticket.reviewReason === "rule_adjusted" && ticket.plan === "enterprise") {
       priorityDifferenceReason =
         "Raised to P1 because enterprise tickets are always at least P1";
     } else if (ticket.reviewReason) {

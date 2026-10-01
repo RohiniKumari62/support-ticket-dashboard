@@ -267,4 +267,135 @@ describe("useReviewQueue", () => {
     expect(submitReviewFn).toHaveBeenCalledTimes(2);
     expect(result.current.remainingCount).toBe(0);
   });
+
+  it("changing AI priority P0 to P1 saves successfully, preserves original aiPriority in aiPriority, stores reason, and leaves queue", async () => {
+    let capturedTicket: Ticket | null = null;
+    const mockApi: TicketsApiClient = {
+      claimTicket: vi.fn(),
+      changeTicketStatus: vi.fn(),
+      retriageTicket: vi.fn(),
+      submitReview: vi.fn().mockImplementation(async (ticket: Ticket, decision, reviewerId) => {
+        capturedTicket = ticket;
+        // Verify ticket state passed into submitReview does NOT have humanReview already set
+        expect(ticket.humanReview).toBeNull();
+        expect(ticket.triageDecision).toBe("manual_review");
+
+        return {
+          ok: true,
+          ticket: {
+            ...ticket,
+            category: decision.type === "change" ? decision.category : ticket.category,
+            priority: decision.type === "change" ? decision.priority : ticket.priority,
+            aiPriority: ticket.priority, // Preserved P0
+            humanReview: {
+              action: "changed" as const,
+              reviewedBy: reviewerId,
+              note: decision.type === "change" ? decision.reason : null,
+            },
+          },
+        };
+      }),
+    };
+
+    const p0Ticket = createTicket("T-P0", {
+      priority: "P0",
+      aiPriority: null,
+      triageDecision: "manual_review",
+      humanReview: null,
+    });
+
+    const store = makeStore(undefined, { api: mockApi });
+    store.dispatch(ticketsSeeded({ tickets: [p0Ticket] }));
+
+    const { result } = renderHook(
+      () =>
+        useReviewQueue({
+          initialTickets: [p0Ticket],
+          currentAgentId: currentAgent,
+          api: mockApi,
+        }),
+      { wrapper: createWrapper(store) }
+    );
+
+    expect(result.current.remainingCount).toBe(1);
+
+    await act(async () => {
+      await result.current.change("T-P0", {
+        category: "bug",
+        priority: "P1",
+        reason: "Priority adjusted based on actual impact.",
+      });
+    });
+
+    // Check that submitReview was called
+    expect(mockApi.submitReview).toHaveBeenCalledTimes(1);
+    expect(capturedTicket).not.toBeNull();
+
+    // Verify ticket leaves the manual review queue
+    expect(result.current.remainingCount).toBe(0);
+    expect(result.current.feedback?.kind).toBe("success");
+
+    // Verify Redux store state
+    const savedTicket = store.getState().tickets.byId["T-P0"];
+    expect(savedTicket.priority).toBe("P1");
+    expect(savedTicket.aiPriority).toBe("P0");
+    expect(savedTicket.humanReview?.action).toBe("changed");
+    expect(savedTicket.humanReview?.note).toBe("Priority adjusted based on actual impact.");
+  });
+
+  it("DUPLICATE CLICK on Change calls submitReview only once", async () => {
+    let resolveApi: (val: ApiResult<Ticket>) => void;
+    const submitReviewFn = vi.fn().mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveApi = resolve;
+        })
+    );
+
+    const mockApi: TicketsApiClient = {
+      claimTicket: vi.fn(),
+      changeTicketStatus: vi.fn(),
+      retriageTicket: vi.fn(),
+      submitReview: submitReviewFn,
+    };
+
+    const t1 = createTicket("T-P0", { priority: "P0" });
+    const store = makeStore(undefined, { api: mockApi });
+    store.dispatch(ticketsSeeded({ tickets: [t1] }));
+
+    const { result } = renderHook(
+      () =>
+        useReviewQueue({
+          initialTickets: [t1],
+          currentAgentId: currentAgent,
+          api: mockApi,
+        }),
+      { wrapper: createWrapper(store) }
+    );
+
+    const changeInput = {
+      category: "bug" as const,
+      priority: "P1" as const,
+      reason: "Priority adjusted based on actual impact.",
+    };
+
+    act(() => {
+      result.current.change("T-P0", changeInput);
+      result.current.change("T-P0", changeInput); // Rapid duplicate click
+    });
+
+    expect(submitReviewFn).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveApi!({
+        ok: true,
+        ticket: {
+          ...t1,
+          priority: "P1",
+          aiPriority: "P0",
+          humanReview: { action: "changed", reviewedBy: currentAgent, note: changeInput.reason },
+        },
+      });
+    });
+  });
 });

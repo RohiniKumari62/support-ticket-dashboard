@@ -75,6 +75,7 @@ export function ChangeReviewForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
     setHasAttemptedSubmit(true);
 
     const res = validateReviewChange(ticket, {

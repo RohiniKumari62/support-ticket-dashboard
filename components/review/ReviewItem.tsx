@@ -8,7 +8,6 @@ import {
   formatDataIssues,
   getCategoryLabel,
   getPlanLabel,
-  getPriorityLabel,
   getReviewReasonLabel,
 } from "@/lib/tickets/labels";
 import { formatDateTime, formatDateTimeFull } from "@/lib/tickets/time";
@@ -157,11 +156,8 @@ export function ReviewItem({
           <div>
             <dt className="text-xs text-slate-500 font-medium">AI Priority</dt>
             <dd className="mt-0.5">
-              {isPriorityDifferent ? (
-                <span className="font-medium text-slate-900">
-                  Final {getPriorityLabel(ticket.priority)} · AI suggested{" "}
-                  {getPriorityLabel(ticket.aiPriority)}
-                </span>
+              {isPriorityDifferent && ticket.aiPriority ? (
+                <PriorityBadge priority={ticket.aiPriority} />
               ) : ticket.priority ? (
                 <PriorityBadge priority={ticket.priority} />
               ) : (
@@ -172,7 +168,18 @@ export function ReviewItem({
             </dd>
           </div>
 
-          <div className="md:col-span-2">
+          {isPriorityDifferent && (
+            <div>
+              <dt className="text-xs text-slate-500 font-medium">Final Priority</dt>
+              <dd className="mt-0.5">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {ticket.priority} (manual)
+                </span>
+              </dd>
+            </div>
+          )}
+
+          <div className={isPriorityDifferent && ticket.humanReview?.note ? "" : "md:col-span-2"}>
             <dt className="text-xs text-slate-500 font-medium">AI Reason</dt>
             <dd className="text-slate-700 text-xs mt-0.5">
               {ticket.reviewReason ? (
@@ -184,6 +191,15 @@ export function ReviewItem({
               )}
             </dd>
           </div>
+
+          {ticket.humanReview?.note && (
+            <div>
+              <dt className="text-xs text-slate-500 font-medium">Reason for change (human)</dt>
+              <dd className="text-slate-700 text-xs mt-0.5 break-words">
+                {ticket.humanReview.note}
+              </dd>
+            </div>
+          )}
 
           <div className="md:col-span-2 pt-1 border-t border-slate-200/60">
             <dt className="text-xs text-slate-500 font-medium">AI Summary</dt>

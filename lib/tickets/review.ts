@@ -211,7 +211,7 @@ export function applyReview(
 
   // aiPriority is set if final priority differs from previous valid AI priority
   let aiPriority = ticket.aiPriority;
-  if (previousPriority !== null && previousPriority !== newPriority) {
+  if (!aiPriority && previousPriority !== null && previousPriority !== newPriority) {
     aiPriority = previousPriority;
   }
 

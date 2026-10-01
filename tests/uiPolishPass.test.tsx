@@ -242,7 +242,7 @@ describe("UI Polish Pass Verification", () => {
       // On track (P1 has 4h SLA, at createdTime + 1h = 75% remaining)
       const onTrackTicket = createTicket({
         priority: "P1",
-        createdAt: "2026-09-30T10:00:00.000Z",
+        createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
       });
 
       const { rerender } = render(<DeadlineCell ticket={onTrackTicket} />);

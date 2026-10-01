@@ -134,7 +134,8 @@ export const reviewTicketThunk = createAppAsyncThunk<
 >(
   "tickets/review",
   async ({ ticketId, decision, reviewerId }, { extra, getState, rejectWithValue }) => {
-    const currentTicket = getState().tickets.byId[ticketId];
+    const inFlight = getState().tickets.inFlight[ticketId];
+    const currentTicket = inFlight?.snapshot ?? getState().tickets.byId[ticketId];
     try {
       const res = await extra.api.submitReview(currentTicket, decision, reviewerId);
       if (!res.ok) {
