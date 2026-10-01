@@ -41,7 +41,7 @@ export default function RootLayout({
   // Seed initial tickets from the shared server store so SSR data
   // and the API share the same in-memory state.
   const store = getTicketStore();
-  const listResult = store.list({ limit: 200 });
+  const listResult = store.list({ limit: 50 });
   const tickets = listResult.ok ? listResult.tickets : [];
   const duplicatesRemoved = listResult.ok ? listResult.duplicatesRemoved : 0;
   // Use server time as the live-update cursor starting point

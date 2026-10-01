@@ -35,6 +35,8 @@ export function AgentSelect() {
           aria-hidden="true"
           width={28}
           height={28}
+          loading="lazy"
+          decoding="async"
           className="h-7 w-7 shrink-0 rounded-full object-cover select-none"
         />
         {/* Native select */}

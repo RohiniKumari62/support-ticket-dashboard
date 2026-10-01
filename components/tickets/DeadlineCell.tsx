@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { Ticket } from "@/types/ticket";
 import { formatDateTime, formatDateTimeFull, getDeadline } from "@/lib/tickets/time";
@@ -54,7 +54,7 @@ function getStatusBadge(state: DeadlineState) {
   }
 }
 
-export function DeadlineCell({
+function ActiveDeadlineCell({
   ticket,
   showStaticTime = true,
 }: DeadlineCellProps) {
@@ -62,13 +62,6 @@ export function DeadlineCell({
 
   // If clock has not yet hydrated or SSR, render fallback static deadline time
   if (now === null) {
-    if (ticket.status === "resolved" || ticket.status === "closed") {
-      return (
-        <div className="flex flex-col text-xs text-slate-500 tabular">
-          <span>—</span>
-        </div>
-      );
-    }
     const deadlineIso = getDeadline(ticket.createdAt, ticket.priority);
     const fallbackFormatted = deadlineIso ? formatDateTime(deadlineIso) : "—";
     const fullStatic = deadlineIso ? formatDateTimeFull(deadlineIso) : "";
@@ -114,4 +107,19 @@ export function DeadlineCell({
       )}
     </div>
   );
+}
+
+export function DeadlineCell({
+  ticket,
+  showStaticTime = true,
+}: DeadlineCellProps) {
+  if (ticket.status === "resolved" || ticket.status === "closed") {
+    return (
+      <div className="flex flex-col text-xs text-slate-500 tabular">
+        <span>—</span>
+      </div>
+    );
+  }
+
+  return <ActiveDeadlineCell ticket={ticket} showStaticTime={showStaticTime} />;
 }

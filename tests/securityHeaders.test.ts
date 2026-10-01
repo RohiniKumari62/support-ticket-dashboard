@@ -13,10 +13,13 @@ describe("Security Headers and CSP (Phase 10)", () => {
     vi.stubEnv("NODE_ENV", "production");
     const headerConfigs = await nextConfig.headers();
 
-    expect(headerConfigs).toHaveLength(1);
-    const mainConfig = headerConfigs[0];
+    // There may be multiple header rules (e.g. caching rules for static assets)
+    expect(headerConfigs.length).toBeGreaterThanOrEqual(1);
 
-    expect(mainConfig.source).toBe("/:path*");
+    // Find the catch-all security rule
+    const mainConfig = headerConfigs.find((c) => c.source === "/:path*");
+    expect(mainConfig).toBeDefined();
+    if (!mainConfig) return;
 
     const headerMap = new Map(
       mainConfig.headers.map((h) => [h.key.toLowerCase(), h.value])
@@ -64,7 +67,12 @@ describe("Security Headers and CSP (Phase 10)", () => {
 
     vi.stubEnv("NODE_ENV", "development");
     const headerConfigs = await nextConfig.headers();
-    const mainConfig = headerConfigs[0];
+
+    // Find the catch-all security rule
+    const mainConfig = headerConfigs.find((c) => c.source === "/:path*");
+    expect(mainConfig).toBeDefined();
+    if (!mainConfig) return;
+
     const headerMap = new Map(
       mainConfig.headers.map((h) => [h.key.toLowerCase(), h.value])
     );

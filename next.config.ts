@@ -29,6 +29,7 @@ function getCspHeader(isDev: boolean): string {
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  compress: true,
   async headers() {
     const isDev = process.env.NODE_ENV === "development";
     const csp = getCspHeader(isDev);

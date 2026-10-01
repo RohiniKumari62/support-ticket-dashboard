@@ -65,7 +65,20 @@ export function LiveUpdatesController({
   }, [instanceId]);
 
   useEffect(() => {
-    dispatch(loadCountedScope());
+    // Defer the counts bootstrap until the browser is idle so it doesn't
+    // compete with React hydration for the main thread (improves TTI/TBT).
+    const ric =
+      typeof requestIdleCallback !== "undefined"
+        ? requestIdleCallback
+        : (cb: () => void) => setTimeout(cb, 200);
+    const handle = ric(() => {
+      dispatch(loadCountedScope());
+    });
+    return () => {
+      if (typeof cancelIdleCallback !== "undefined") {
+        cancelIdleCallback(handle as number);
+      }
+    };
   }, [dispatch]);
 
   useEffect(() => {
