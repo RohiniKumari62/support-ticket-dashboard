@@ -9,7 +9,7 @@ import React from "react";
 import { Provider } from "react-redux";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { makeStore } from "@/lib/store/store";
-import { ticketsSeeded } from "@/lib/store/tickets-slice";
+import { ticketsSeeded, countedScopeLoaded } from "@/lib/store/tickets-slice";
 import { agentHydrated } from "@/lib/store/agent-slice";
 import type { Ticket } from "@/types/ticket";
 
@@ -90,6 +90,7 @@ describe("AppHeader", () => {
       updatedAt: "2026-09-20T10:00:00Z",
     };
     store.dispatch(ticketsSeeded({ tickets: [sampleTicket] }));
+    store.dispatch(countedScopeLoaded({ tickets: [sampleTicket] }));
 
     renderHeader(store);
     const link = screen.getByRole("link", { name: "To review (1)" });

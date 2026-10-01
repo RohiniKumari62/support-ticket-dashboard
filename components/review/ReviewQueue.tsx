@@ -7,7 +7,10 @@ import type { TicketsApiClient } from "@/lib/api/tickets-client";
 import { useReviewQueue } from "./useReviewQueue";
 import { ReviewItem } from "./ReviewItem";
 import { useAppSelector } from "@/lib/store/hooks";
-import { selectInFlightAction } from "@/lib/store/tickets-selectors";
+import {
+  selectCountsBootstrapped,
+  selectInFlightAction,
+} from "@/lib/store/tickets-selectors";
 
 export interface ReviewQueueProps {
   tickets?: Ticket[];
@@ -49,6 +52,7 @@ function ReviewItemRow({
 export function ReviewQueue({
   currentAgentId,
 }: ReviewQueueProps = {}) {
+  const countsBootstrapped = useAppSelector(selectCountsBootstrapped);
   const {
     tickets,
     remainingCount,
@@ -108,6 +112,31 @@ export function ReviewQueue({
       }
     }
   }, [tickets]);
+
+  if (!countsBootstrapped) {
+    return (
+      <div className="space-y-6 max-w-[1400px]">
+        <div className="space-y-1">
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 break-words">
+            AI review queue
+          </h1>
+          <p className="text-sm text-slate-600">
+            Tickets where the AI asked for a human check.
+          </p>
+          <p
+            role="status"
+            aria-live="polite"
+            className="text-xs text-slate-500 font-medium pt-1"
+          >
+            Loading review queue…
+          </p>
+        </div>
+        <div className="rounded-[6px] border border-slate-200 bg-white p-12 text-center text-slate-500 text-sm">
+          Loading review queue…
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-[1400px]">

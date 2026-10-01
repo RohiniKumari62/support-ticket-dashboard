@@ -12,6 +12,7 @@ import {
   liveReset,
 } from "@/lib/store/live-slice";
 import { ticketReceivedFromServer } from "@/lib/store/tickets-slice";
+import { loadCountedScope } from "@/lib/store/tickets-thunks";
 import type { Ticket } from "@/types/ticket";
 import { parseTicketsArray } from "@/lib/api/parse-ticket";
 
@@ -62,6 +63,10 @@ export function LiveUpdatesController({
   useEffect(() => {
     if (instanceId) instanceIdRef.current = instanceId;
   }, [instanceId]);
+
+  useEffect(() => {
+    dispatch(loadCountedScope());
+  }, [dispatch]);
 
   useEffect(() => {
     let cancelled = false;

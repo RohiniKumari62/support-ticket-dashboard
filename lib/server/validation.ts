@@ -108,7 +108,7 @@ export function parseListQuery(url: URL): ValidationResult<ListQuery> {
   }
 
   const limitParam = url.searchParams.get("limit");
-  let limit = 50;
+  let limit: number | undefined;
   if (limitParam !== null && limitParam !== "") {
     const num = Number(limitParam);
     if (!Number.isInteger(num) || num < 1 || num > 200) {
@@ -116,6 +116,8 @@ export function parseListQuery(url: URL): ValidationResult<ListQuery> {
     } else {
       limit = num;
     }
+  } else if (scope !== "counts") {
+    limit = 50;
   }
 
   const cursorParam = url.searchParams.get("cursor");

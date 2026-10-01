@@ -49,6 +49,7 @@ export interface TicketsApiClient {
     decision: ReviewDecision,
     reviewerId: string
   ): Promise<ApiResult<Ticket>>;
+  loadCountedScope?(): Promise<Ticket[]>;
 }
 
 /**

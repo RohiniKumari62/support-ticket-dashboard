@@ -21,6 +21,8 @@ export const selectInFlightAction = (state: RootState, id: string) =>
 export const selectCurrentAgentId = (state: RootState) =>
   state.agent.currentAgentId;
 export const selectAgentHydrated = (state: RootState) => state.agent.hydrated;
+export const selectCountsBootstrapped = (state: RootState) =>
+  state.tickets.countsBootstrapped;
 
 export const selectBulkState = (state: RootState) => state.tickets.bulk;
 

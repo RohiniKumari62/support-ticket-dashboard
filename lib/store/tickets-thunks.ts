@@ -19,7 +19,7 @@ import {
   formatClaimErrorMessage,
   formatStatusErrorMessage,
 } from "@/lib/tickets/action-messages";
-import { setBulkProgress, setBulkRunning } from "./tickets-slice";
+import { countedScopeLoaded, setBulkProgress, setBulkRunning } from "./tickets-slice";
 
 /** Payload shape passed to rejectWithValue so the slice can apply conflict rollback. */
 export interface ThunkRejectPayload {
@@ -345,5 +345,40 @@ export const bulkRunThunk = createAppAsyncThunk<
       if (ticketIds.length === 0 || ticketIds.length > MAX_BULK_SELECTION) return false;
       return true;
     },
+  }
+);
+
+export const loadCountedScope = createAppAsyncThunk<
+  { tickets: Ticket[] },
+  void
+>(
+  "tickets/loadCountedScope",
+  async (_, { extra, dispatch }) => {
+    try {
+      if (
+        extra?.api &&
+        "loadCountedScope" in extra.api &&
+        typeof extra.api.loadCountedScope === "function"
+      ) {
+        const tickets = await extra.api.loadCountedScope();
+        dispatch(countedScopeLoaded({ tickets }));
+        return { tickets };
+      }
+      const res = await fetch("/api/tickets?scope=counts");
+      if (!res.ok) throw new Error("Failed to load counts");
+      const json = await res.json();
+      const rawTickets = Array.isArray(json?.tickets) ? json.tickets : [];
+      const parsed: Ticket[] = [];
+      for (const raw of rawTickets) {
+        if (raw && typeof raw === "object" && typeof raw.id === "string") {
+          parsed.push(raw as Ticket);
+        }
+      }
+      dispatch(countedScopeLoaded({ tickets: parsed }));
+      return { tickets: parsed };
+    } catch {
+      dispatch(countedScopeLoaded({ tickets: [] }));
+      return { tickets: [] };
+    }
   }
 );

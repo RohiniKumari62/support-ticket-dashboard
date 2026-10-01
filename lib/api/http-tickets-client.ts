@@ -268,6 +268,23 @@ class HttpTicketsApiClient implements TicketsApiClient {
       };
     }
   }
+
+  async loadCountedScope(): Promise<Ticket[]> {
+    try {
+      const res = await fetch("/api/tickets?scope=counts");
+      if (!res.ok) return [];
+      const body = await res.json();
+      const rawTickets = Array.isArray(body?.tickets) ? body.tickets : [];
+      const parsed = [];
+      for (const raw of rawTickets) {
+        const t = parseTicket(raw);
+        if (t) parsed.push(t);
+      }
+      return parsed;
+    } catch {
+      return [];
+    }
+  }
 }
 
 export const httpTicketsApiClient: TicketsApiClient =

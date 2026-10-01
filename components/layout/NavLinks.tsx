@@ -3,10 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAppSelector } from "@/lib/store/hooks";
-import { selectReviewCount } from "@/lib/store/tickets-selectors";
+import {
+  selectCountsBootstrapped,
+  selectReviewCount,
+} from "@/lib/store/tickets-selectors";
 
 export function NavLinks() {
   const pathname = usePathname();
+  const countsBootstrapped = useAppSelector(selectCountsBootstrapped);
   const reviewCount = useAppSelector(selectReviewCount);
 
   function isActive(href: string): boolean {
@@ -17,9 +21,13 @@ export function NavLinks() {
     return pathname === href;
   }
 
+  const reviewLabel = countsBootstrapped
+    ? `To review (${reviewCount})`
+    : "To review (–)";
+
   const navItems = [
     { label: "Tickets", href: "/tickets" },
-    { label: `To review (${reviewCount})`, href: "/review" },
+    { label: reviewLabel, href: "/review" },
   ];
 
   return (

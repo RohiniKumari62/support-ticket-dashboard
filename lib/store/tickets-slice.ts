@@ -22,6 +22,7 @@ export interface TicketsState {
   byId: Record<string, Ticket>;
   ids: string[];
   duplicatesRemoved: number;
+  countsBootstrapped: boolean;
   inFlight: Record<string, InFlightAction>;
   bulk: {
     running: boolean;
@@ -34,6 +35,7 @@ const initialState: TicketsState = {
   byId: {},
   ids: [],
   duplicatesRemoved: 0,
+  countsBootstrapped: false,
   inFlight: {},
   bulk: {
     running: false,
@@ -100,6 +102,25 @@ export const ticketsSlice = createSlice({
     ) {
       state.bulk.done = action.payload.done;
       state.bulk.total = action.payload.total;
+    },
+    countedScopeLoaded(
+      state,
+      action: PayloadAction<{ tickets: Ticket[] }>
+    ) {
+      const { tickets } = action.payload;
+      for (const t of tickets) {
+        if (!t?.id || t.id === "__proto__" || t.id === "constructor" || t.id === "prototype") {
+          continue;
+        }
+        const existing = state.byId[t.id];
+        if (!existing) {
+          state.byId[t.id] = t;
+          state.ids.push(t.id);
+        } else if (t.version > existing.version) {
+          state.byId[t.id] = t;
+        }
+      }
+      state.countsBootstrapped = true;
     },
   },
   extraReducers: (builder) => {
@@ -226,6 +247,7 @@ export const ticketsSlice = createSlice({
 export const {
   ticketsSeeded,
   ticketReceivedFromServer,
+  countedScopeLoaded,
   setBulkRunning,
   setBulkProgress,
 } = ticketsSlice.actions;

@@ -6,7 +6,7 @@ import { ReviewQueue } from "@/components/review/ReviewQueue";
 import { normalizeTickets } from "@/lib/tickets/normalize";
 import { TEST_TICKETS } from "@/data/test-tickets";
 import { makeStore } from "@/lib/store/store";
-import { ticketsSeeded } from "@/lib/store/tickets-slice";
+import { ticketsSeeded, countedScopeLoaded } from "@/lib/store/tickets-slice";
 import type { Ticket } from "@/types/ticket";
 
 describe("ReviewQueue rendering", () => {
@@ -16,6 +16,8 @@ describe("ReviewQueue rendering", () => {
   function renderWithStore(queueTickets: Ticket[]) {
     const store = makeStore();
     store.dispatch(ticketsSeeded({ tickets: queueTickets }));
+    // Mark counts bootstrap as done so the component renders content
+    store.dispatch(countedScopeLoaded({ tickets: queueTickets }));
     return renderToStaticMarkup(
       <Provider store={store}>
         <ReviewQueue />

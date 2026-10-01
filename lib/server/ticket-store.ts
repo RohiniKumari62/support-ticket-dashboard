@@ -107,8 +107,8 @@ export class TicketStore {
     instanceId: string;
     duplicatesRemoved: number;
   }> {
-    const limit = query.limit ?? 50;
     const isCountsScope = query.scope === "counts";
+    const limit = query.limit ?? (isCountsScope ? Number.MAX_SAFE_INTEGER : 50);
 
     const filterObj: TicketFilters = {
       q: query.q ?? "",
