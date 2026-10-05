@@ -1,4 +1,4 @@
-﻿# Engineering Decisions & Architecture Matrix
+# Engineering Decisions & Architecture Matrix
 
 **Project:** Support Ticket Dashboard  
 **Deployment:** [https://support-ticket-dashboard-phi.vercel.app/](https://support-ticket-dashboard-phi.vercel.app/)  
@@ -141,3 +141,14 @@ Given the frontend-first intern assignment timeline, certain production capabili
 3. **Real Authentication**: Currently uses a simulated agent selector dropdown in the header. *With one more week*: Integrate NextAuth.js or Clerk with role-based access control (RBAC).
 4. **Real AI Provider Integration**: Currently uses a simulated server-side AI triage engine. *With one more week*: Connect Anthropic Claude 3.5 Sonnet / OpenAI GPT-4o with streaming triage generation.
 5. **Keyboard Power-User Navigation**: *With one more week*: Add Gmail-style hotkeys (`j`/`k` for row navigation, `e` to close, `c` to claim) for rapid support triaging.
+
+---
+
+## 9. Bulk Action Selection Identity & Deterministic Seed Synchronization
+
+1. **Identity-Based Selection**: Ticket selection is stored exclusively as `Set<string>` of immutable ticket IDs (`ticket.id` / `external_id`). Selection is never stored or looked up by row index, list position, or array offset.
+2. **Stable Visible Order & Selection Intersection**: `effectiveSelectedIds` derives directly from `visibleTicketIds.filter(id => selectedIds.has(id))`, guaranteeing that bulk action dispatch respects visible document order without losing ticket identity during live updates, reordering, or filter adjustments.
+3. **Post-Action Selection Hygiene**: Upon bulk action completion, tickets that are either successful or skipped (e.g., terminal closed tickets) are immediately removed from `selectedIds`. Only failed items eligible for retry remain, preventing ineligible tickets from lingering in subsequent selection payloads.
+4. **Deterministic Server-Side Seed**: In `lib/server/get-store.ts`, `buildSeed()` utilizes deterministic pseudorandom number generation (`createRng(42)`). This guarantees that SSR rendering and Route Handler worker threads in Next.js share the exact same ticket IDs and initial metadata across process boundaries, preventing ticket attribute mismatches.
+5. **AI Review Queue Completion Authority (`isReviewPending`)**: The review queue membership is strictly governed by `isReviewPending(ticket)`. A ticket leaves the `/review` queue once human review has been recorded (`humanReview != null`), an explicit `finalPriority` is defined, or a manual priority change is already in effect (`aiPriority && priority && aiPriority !== priority`). Reviewed tickets remain fully accessible in the primary `/tickets` dashboard with their finalized values.
+

@@ -11,7 +11,7 @@ declare global {
  */
 export function getTicketStore(): TicketStore {
   if (!globalThis.__ticketStore__) {
-    const seed = buildSeed({ now: Date.now(), random: Math.random });
+    const seed = buildSeed();
     globalThis.__ticketStore__ = createTicketStore({
       tickets: seed.tickets,
       duplicatesRemoved: seed.duplicatesRemoved,

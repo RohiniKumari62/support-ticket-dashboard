@@ -65,6 +65,38 @@ describe("lib/tickets/review", () => {
       expect(queueIds).not.toContain("T-HANDLED");
     });
 
+    it("excludes tickets that already have a manual priority set or finalPriority defined (e.g. T-10768)", () => {
+      // Simulating T-10768: AI suggested P3, but manual/final priority is P1
+      const manualPriorityTicket = createTicket({
+        id: "T-10768",
+        plan: "enterprise",
+        priority: "P1",
+        aiPriority: "P3",
+        triageDecision: "manual_review",
+      });
+
+      const explicitFinalPriorityTicket = createTicket({
+        id: "T-FINAL-P",
+        priority: "P2",
+        finalPriority: "P2",
+        triageDecision: "manual_review",
+      });
+
+      const unhandledTicket = createTicket({
+        id: "T-PENDING",
+        priority: "P2",
+        aiPriority: null,
+        triageDecision: "manual_review",
+      });
+
+      const queue = getReviewQueue([manualPriorityTicket, explicitFinalPriorityTicket, unhandledTicket]);
+      const queueIds = queue.map((t) => t.id);
+
+      expect(queueIds).not.toContain("T-10768");
+      expect(queueIds).not.toContain("T-FINAL-P");
+      expect(queueIds).toContain("T-PENDING");
+    });
+
     it("sorts by priority (P0 -> P3, invalid last), then oldest createdAt first, then id", () => {
       const tP3Old = createTicket({
         id: "T-P3-OLD",

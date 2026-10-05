@@ -21,10 +21,10 @@ export function useBulkSelection({
     setSelectedIds(new Set());
   }
 
-  // Compute effective selection as intersection of selected IDs with visible IDs
+  // Compute effective selection as intersection of selected IDs with visible IDs,
+  // strictly preserving visible ticket order and using stable ticket IDs
   const effectiveSelectedIds = useMemo(() => {
-    const visibleSet = new Set(visibleTicketIds);
-    return Array.from(selectedIds).filter((id) => visibleSet.has(id));
+    return visibleTicketIds.filter((id) => selectedIds.has(id));
   }, [selectedIds, visibleTicketIds]);
 
   const toggle = useCallback((id: string) => {
@@ -42,8 +42,10 @@ export function useBulkSelection({
   const selectAllVisible = useCallback((visibleIds: string[]) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      const capped = visibleIds.slice(0, MAX_BULK_SELECTION);
-      for (const id of capped) next.add(id);
+      for (const id of visibleIds) {
+        if (next.size >= MAX_BULK_SELECTION) break;
+        next.add(id);
+      }
       return next;
     });
   }, []);

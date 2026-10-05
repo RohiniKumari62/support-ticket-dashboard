@@ -97,6 +97,17 @@ describe("filterTickets", () => {
     expect(result).toHaveLength(ALL_TICKETS.length);
   });
 
+  it("searches by ticket ID (case-insensitive and substring)", () => {
+    const exact = filterTickets(ALL_TICKETS, { ...EMPTY_FILTERS, q: "T-2001" });
+    expect(exact.some((t) => t.id === "T-2001")).toBe(true);
+
+    const lower = filterTickets(ALL_TICKETS, { ...EMPTY_FILTERS, q: "t-2001" });
+    expect(lower.some((t) => t.id === "T-2001")).toBe(true);
+
+    const partial = filterTickets(ALL_TICKETS, { ...EMPTY_FILTERS, q: "2001" });
+    expect(partial.some((t) => t.id === "T-2001")).toBe(true);
+  });
+
   it("searches by subject (case-insensitive)", () => {
     const result = filterTickets(ALL_TICKETS, { ...EMPTY_FILTERS, q: "sso" });
     expect(result.some((t) => t.id === "T-2001")).toBe(true);

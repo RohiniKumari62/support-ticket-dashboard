@@ -125,7 +125,7 @@ export function parseTicketFilters(
 
 /**
  * Returns true if a single ticket satisfies all active filter conditions.
- * - Search is case-insensitive substring on subject OR body (body may be null)
+ * - Search is case-insensitive substring on ID, subject, OR body (body may be null)
  * - Tickets with null normalized value are excluded when that filter is active
  */
 export function ticketMatchesFilters(
@@ -135,12 +135,16 @@ export function ticketMatchesFilters(
   const { q, status, priority, category, decision } = filters;
   const normalizedQ = q ? q.toLowerCase() : "";
 
-  // Search filter — subject and body only
+  // Search filter — ID, subject, and body
   if (normalizedQ) {
-    const inSubject = ticket.subject.toLowerCase().includes(normalizedQ);
+    const inId =
+      ticket.id != null && ticket.id.toLowerCase().includes(normalizedQ);
+    const inSubject =
+      ticket.subject != null &&
+      ticket.subject.toLowerCase().includes(normalizedQ);
     const inBody =
       ticket.body != null && ticket.body.toLowerCase().includes(normalizedQ);
-    if (!inSubject && !inBody) return false;
+    if (!inId && !inSubject && !inBody) return false;
   }
 
   // Status filter

@@ -61,7 +61,6 @@ export function TicketsWorkspace({ filters }: TicketsWorkspaceProps) {
     toggle,
     selectAllVisible,
     clearSelection,
-    removeIds,
     isAllVisibleSelected,
     isPartiallySelected,
   } = useBulkSelection({
@@ -82,30 +81,29 @@ export function TicketsWorkspace({ filters }: TicketsWorkspaceProps) {
 
   const handleBulkClaim = useCallback(async () => {
     if (effectiveSelectedIds.length === 0 || bulkState.running) return;
+    const idsToRun = [...effectiveSelectedIds];
+    clearSelection();
     setLastBulkKind("claim");
     setLastBulkTarget(undefined);
 
     const resAction = await dispatch(
       bulkRunThunk({
         kind: "claim",
-        ticketIds: effectiveSelectedIds,
+        ticketIds: idsToRun,
         agentId: currentAgentId,
       })
     );
 
     if (bulkRunThunk.fulfilled.match(resAction)) {
-      const results = resAction.payload;
-      setBulkResults(results);
-      const successfulIds = results
-        .filter((r) => r.outcome === "success")
-        .map((r) => r.ticketId);
-      removeIds(successfulIds);
+      setBulkResults(resAction.payload);
     }
-  }, [bulkState.running, currentAgentId, dispatch, effectiveSelectedIds, removeIds]);
+  }, [bulkState.running, clearSelection, currentAgentId, dispatch, effectiveSelectedIds]);
 
   const handleBulkStatus = useCallback(
     async (status: TicketStatus) => {
       if (effectiveSelectedIds.length === 0 || bulkState.running) return;
+      const idsToRun = [...effectiveSelectedIds];
+      clearSelection();
       setLastBulkKind("status");
       setLastBulkTarget(status);
 
@@ -113,35 +111,30 @@ export function TicketsWorkspace({ filters }: TicketsWorkspaceProps) {
         bulkRunThunk({
           kind: "status",
           target: status,
-          ticketIds: effectiveSelectedIds,
+          ticketIds: idsToRun,
           agentId: currentAgentId,
         })
       );
 
       if (bulkRunThunk.fulfilled.match(resAction)) {
-        const results = resAction.payload;
-        setBulkResults(results);
-        const successfulIds = results
-          .filter((r) => r.outcome === "success")
-          .map((r) => r.ticketId);
-        removeIds(successfulIds);
+        setBulkResults(resAction.payload);
       }
     },
-    [bulkState.running, currentAgentId, dispatch, effectiveSelectedIds, removeIds]
+    [bulkState.running, clearSelection, currentAgentId, dispatch, effectiveSelectedIds]
   );
 
   const handleRetryFailed = useCallback(async () => {
-    const failedIds = bulkResults
-      .filter((r) => r.outcome === "failed")
+    const retryableFailedIds = bulkResults
+      .filter((r) => r.outcome === "failed" && r.retryable !== false)
       .map((r) => r.ticketId);
 
-    if (failedIds.length === 0 || bulkState.running) return;
+    if (retryableFailedIds.length === 0 || bulkState.running) return;
 
     const resAction = await dispatch(
       bulkRunThunk({
         kind: lastBulkKind,
         target: lastBulkTarget,
-        ticketIds: failedIds,
+        ticketIds: retryableFailedIds,
         agentId: currentAgentId,
       })
     );
@@ -156,10 +149,6 @@ export function TicketsWorkspace({ filters }: TicketsWorkspaceProps) {
         }
         return Array.from(map.values());
       });
-      const successfulIds = newResults
-        .filter((r) => r.outcome === "success")
-        .map((r) => r.ticketId);
-      removeIds(successfulIds);
     }
   }, [
     bulkResults,
@@ -168,7 +157,6 @@ export function TicketsWorkspace({ filters }: TicketsWorkspaceProps) {
     dispatch,
     lastBulkKind,
     lastBulkTarget,
-    removeIds,
   ]);
 
   const handleDismissResults = useCallback(() => {

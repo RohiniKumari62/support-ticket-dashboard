@@ -46,9 +46,13 @@ export interface RawTicket {
   category?: string | null;
   priority?: string | null;
   ai_priority?: string | null;
+  final_priority?: string | null;
+  finalPriority?: string | null;
   summary?: string | null;
   triage_decision?: string | null;
   review_reason?: string | null;
+  human_review?: unknown;
+  humanReview?: unknown;
   [key: string]: unknown;
 }
 
@@ -72,6 +76,7 @@ export interface Ticket {
   category: Category | null;
   priority: Priority | null;
   aiPriority: Priority | null;
+  finalPriority?: Priority | null;
   summary: string | null;
   triageDecision: TriageDecision;
   reviewReason: string | null;

@@ -178,6 +178,32 @@ export function normalizeTicket(raw: RawTicket, now: Date): Ticket {
   // Created At
   const createdAt = parseCreatedAt(raw.created_at, now, issues);
 
+  // Final Priority if explicitly provided
+  let finalPriority: Priority | null = null;
+  const rawFinalP = raw.finalPriority ?? raw.final_priority;
+  if (rawFinalP && VALID_PRIORITIES.has(rawFinalP as Priority)) {
+    finalPriority = rawFinalP as Priority;
+  }
+
+  // Human Review if already recorded
+  let humanReview: import("@/types/ticket").HumanReview | null = null;
+  const rawHuman = raw.humanReview ?? raw.human_review;
+  if (rawHuman && typeof rawHuman === "object") {
+    const rh = rawHuman as Record<string, unknown>;
+    if (rh.action === "accepted" || rh.action === "changed") {
+      humanReview = {
+        action: rh.action,
+        reviewedBy:
+          typeof rh.reviewedBy === "string"
+            ? rh.reviewedBy
+            : typeof rh.reviewed_by === "string"
+            ? rh.reviewed_by
+            : "agent-1",
+        note: typeof rh.note === "string" ? rh.note : null,
+      };
+    }
+  }
+
   return {
     id: raw.external_id ? String(raw.external_id) : "",
     customerId: raw.customer_id ? String(raw.customer_id) : "",
@@ -192,12 +218,13 @@ export function normalizeTicket(raw: RawTicket, now: Date): Ticket {
     category,
     priority,
     aiPriority,
+    finalPriority,
     summary: typeof raw.summary === "string" ? raw.summary : null,
     triageDecision,
     reviewReason:
       typeof raw.review_reason === "string" ? raw.review_reason : null,
     dataIssues: issues,
-    humanReview: null,
+    humanReview,
     version: 1,
     updatedAt: now.toISOString(),
   };

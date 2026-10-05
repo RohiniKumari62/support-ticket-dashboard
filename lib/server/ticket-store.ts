@@ -10,6 +10,7 @@ import { canTransition } from "@/lib/tickets/transitions";
 import {
   applyReview,
   isAcceptable,
+  isReviewPending,
   validateReviewChange,
 } from "@/lib/tickets/review";
 import { ticketMatchesFilters, type TicketFilters } from "@/lib/tickets/filters";
@@ -426,7 +427,7 @@ export class TicketStore {
       };
     }
 
-    if (ticket.triageDecision !== "manual_review" || ticket.humanReview != null) {
+    if (!isReviewPending(ticket)) {
       return {
         ok: false,
         status: 409,

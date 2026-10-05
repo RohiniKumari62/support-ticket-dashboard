@@ -25,6 +25,9 @@ export function BulkResultPanel({
   const doneCount = results.filter((r) => r.outcome === "success").length;
   const failedCount = results.filter((r) => r.outcome === "failed").length;
   const skippedCount = results.filter((r) => r.outcome === "skipped").length;
+  const retryableCount = results.filter(
+    (r) => r.outcome === "failed" && r.retryable !== false
+  ).length;
 
   const hasFailures = failedCount > 0;
   const role = hasFailures ? "alert" : "status";
@@ -54,7 +57,7 @@ export function BulkResultPanel({
         </div>
 
         <div className="flex items-center gap-2">
-          {hasFailures && (
+          {retryableCount > 0 && (
             <Button
               type="button"
               variant="outline"
@@ -63,7 +66,7 @@ export function BulkResultPanel({
               disabled={isRetrying}
               className="text-xs"
             >
-              Retry failed ({failedCount})
+              Retry failed ({retryableCount})
             </Button>
           )}
           <Button

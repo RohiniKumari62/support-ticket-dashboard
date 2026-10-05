@@ -5,6 +5,7 @@ import { isValidAgentId } from "@/data/agents";
 import { canTransition, getStatusActionStateForTarget } from "@/lib/tickets/transitions";
 import {
   isAcceptable,
+  isReviewPending,
   type ReviewDecision,
   validateReviewChange,
 } from "@/lib/tickets/review";
@@ -159,7 +160,7 @@ export const reviewTicketThunk = createAppAsyncThunk<
       const ticket = state.tickets.byId[ticketId];
       if (!ticket) return false;
       if (state.tickets.inFlight[ticketId]) return false;
-      if (ticket.triageDecision !== "manual_review" || ticket.humanReview) return false;
+      if (!isReviewPending(ticket)) return false;
       if (!isValidAgentId(reviewerId)) return false;
       if (decision.type === "accept" && !isAcceptable(ticket)) return false;
       if (decision.type === "change") {
@@ -283,7 +284,9 @@ export const bulkRunThunk = createAppAsyncThunk<
           } else {
             const payload = action.payload;
             let msg = formatClaimErrorMessage(payload?.message);
-            if (payload?.code === "conflict" && payload.assignedTo) {
+            const isConflict = payload?.code === "conflict";
+            const isInvalid = payload?.code === "invalid_transition";
+            if (isConflict && payload.assignedTo) {
               msg = formatClaimConflictMessage(payload.assignedTo);
             }
             return {
@@ -291,6 +294,7 @@ export const bulkRunThunk = createAppAsyncThunk<
               subject,
               outcome: "failed",
               message: msg,
+              retryable: !isConflict && !isInvalid,
             };
           }
         } else {
@@ -311,11 +315,14 @@ export const bulkRunThunk = createAppAsyncThunk<
             };
           } else {
             const payload = action.payload;
+            const isConflict = payload?.code === "conflict";
+            const isInvalid = payload?.code === "invalid_transition";
             return {
               ticketId: id,
               subject,
               outcome: "failed",
               message: formatStatusErrorMessage(payload?.message),
+              retryable: !isConflict && !isInvalid,
             };
           }
         }
@@ -327,6 +334,7 @@ export const bulkRunThunk = createAppAsyncThunk<
           subject,
           outcome: "failed",
           message: "Request failed. Nothing was changed.",
+          retryable: true,
         };
       }
     });

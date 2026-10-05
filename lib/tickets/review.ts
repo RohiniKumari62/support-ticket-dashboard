@@ -26,15 +26,41 @@ const VALID_CATEGORIES = new Set<Category>([
 const VALID_PRIORITIES = new Set<Priority>(["P0", "P1", "P2", "P3"]);
 
 /**
+ * Returns true if a ticket is awaiting human triage review.
+ * A ticket is NOT pending review if:
+ * 1. Its triageDecision is not 'manual_review'.
+ * 2. It has already undergone human review (humanReview != null).
+ * 3. Its finalPriority has been explicitly set.
+ * 4. A manual priority is already in place (aiPriority differs from final priority).
+ */
+export function isReviewPending(ticket: Ticket): boolean {
+  if (ticket.triageDecision !== "manual_review") {
+    return false;
+  }
+  if (ticket.humanReview != null) {
+    return false;
+  }
+  if (ticket.finalPriority != null) {
+    return false;
+  }
+  if (
+    ticket.aiPriority != null &&
+    ticket.priority != null &&
+    ticket.aiPriority !== ticket.priority
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * Returns tickets in the review queue:
- * manual_review tickets that have not yet undergone human review.
+ * manual_review tickets that have not yet undergone human review or manual change.
  * Sorted by priority (P0 -> P3, invalid last), then oldest created time first,
  * then id for stable tie-breaking.
  */
 export function getReviewQueue(tickets: Ticket[]): Ticket[] {
-  const queue = tickets.filter(
-    (t) => t.triageDecision === "manual_review" && !t.humanReview
-  );
+  const queue = tickets.filter(isReviewPending);
 
   return queue.sort((a, b) => {
     // 1. Priority: P0 (0) to P3 (3), null/invalid (4) last
@@ -195,6 +221,7 @@ export function applyReview(
       ...ticket,
       priority: flooredPriority,
       aiPriority: floorApplied ? ticket.priority : ticket.aiPriority,
+      finalPriority: flooredPriority,
       reviewReason: floorApplied ? "rule_adjusted" : ticket.reviewReason,
       humanReview: {
         action: "accepted",
@@ -220,6 +247,7 @@ export function applyReview(
     category: decision.category,
     priority: newPriority,
     aiPriority,
+    finalPriority: newPriority,
     humanReview: {
       action: "changed",
       reviewedBy: reviewerId,

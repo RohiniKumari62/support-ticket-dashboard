@@ -12,6 +12,7 @@ export interface BulkTicketResult {
   subject: string;
   outcome: BulkItemOutcome;
   message: string;
+  retryable?: boolean;
 }
 
 export type BulkEligibility =
